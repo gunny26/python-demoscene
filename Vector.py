@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import unittest
 import math
@@ -6,7 +7,18 @@ import math
 class Vector(object):
 
     def __init__(self, *args):
-        if len(args) == 3:
+        if len(args) == 1 and hasattr(args[0], "__getitem__"):
+            if len(args[0]) == 4:
+                self.x = args[0][0]
+                self.y = args[0][1]
+                self.z = args[0][2]
+                self.h = args[0][3]
+            elif len(args[0]) == 3:
+                self.x = args[0][0]
+                self.y = args[0][1]
+                self.z = args[0][2]
+                self.h = 0.0
+        elif len(args) == 3:
             self.x = args[0]
             self.y = args[1]
             self.z = args[2]
@@ -156,16 +168,87 @@ class Utils3d(object):
             (0, 0, 1, 0),
             (0, 0, 0, 1)))
 
+    @staticmethod
+    def get_rot_x_matrix(theta):
+        """return rotation matrix around x axis
+        return rotated version of self around X-Axis
+        theta should be given in radians
+        http://stackoverflow.com/questions/14607640/rotating-a-vector-in-3d-space
+        |1     0           0| |x|   |        x        |   |x'|
+        |0   cos θ    -sin θ| |y| = |y cos θ - z sin θ| = |y'|
+        |0   sin θ     cos θ| |z|   |y sin θ + z cos θ|   |z'|
+        """
+        cos = math.cos(theta)
+        sin = math.sin(theta)
+        return(Matrix3d(
+            (1,    0,   0, 0),
+            (0,  cos, sin, 0),
+            (0, -sin, cos, 0),
+            (0,    0,   0, 1)))
+
+    @staticmethod
+    def get_rot_z_matrix(theta):
+        """
+        return rotated version of self around Z-Axis
+        theta should be given in radians
+        http://stackoverflow.com/questions/1 4607640/rotating-a-vector-in-3d-space
+        |cos θ   -sin θ   0| |x|   |x cos θ - y sin θ|   |x'|
+        |sin θ    cos θ   0| |y| = |x sin θ + y cos θ| = |y'|
+        |  0       0      1| |z|   |        z        |   |z'|
+        """
+        cos = math.cos(theta)
+        sin = math.sin(theta)
+        return(Matrix3d(
+            (cos, -sin, 0, 0),
+            (sin,  cos, 0, 0),
+            (  0,    0, 0, 0),
+            (  0,    0, 0, 1)))
+
+    @staticmethod
+    def get_rot_y_matrix(theta):
+        """
+        return rotated version of self around Y-Axis
+        theta should be given in radians
+        http://stackoverflow.com/questions/14607640/rotating-a-vector-in-3d-space
+        | cos θ    0   sin θ| |x|   | x cos θ + z sin θ|   |x'|
+        |     0    1       0| |y| = |         y        | = |y'|
+        |-sin θ    0   cos θ| |z|   |-x sin θ + z cos θ|   |z'|
+        """
+        cos = math.cos(theta)
+        sin = math.sin(theta)
+        return(Matrix3d(
+            ( cos, 0, sin, 0),
+            (   0, 1,   0, 0),
+            (-sin, 0, cos, 0),
+            (   0, 0,   0, 1)
+            ))
+
 
 class Matrix3d(object):
 
     def __init__(self, *args):
         self.data = [0.0] * 16
         if len(args) == 4:
-            self._set_column_vector(0, args[0])
-            self._set_column_vector(1, args[1])
-            self._set_column_vector(2, args[2])
-            self._set_column_vector(3, args[3])
+            self._set_col_vector(0, args[0])
+            self._set_col_vector(1, args[1])
+            self._set_col_vector(2, args[2])
+            self._set_col_vector(3, args[3])
+        elif len(args) == 16:
+            self.data = args
+        elif len(args) == 1 and hasattr(args[0], "__getitem__"):
+            self.data = args[0]
+
+    def __repr__(self):
+        sb = "Matrix3d("
+        for row in range(4):
+            startindex = row * 4
+            sb += "(%f, %f, %f, %f)," % (
+                self.data[startindex], 
+                self.data[startindex+1], 
+                self.data[startindex+2], 
+                self.data[startindex+3])
+        sb += ")"
+        return(sb)
 
     def __str__(self):
         sb = ""
@@ -184,11 +267,25 @@ class Matrix3d(object):
     def __setitem__(self, key, value):
         self.data[key] = value
 
-    def _set_column_vector(self, colnum, vector):
+    def _set_col_vector(self, colnum, vector):
         counter = colnum
         for item in vector:
             self.data[counter] = item
             counter += 4
+
+    def _get_col_vector(self, colnum):
+        """return column vector as Vector object"""
+        return(Vector(self.data[colnum::4]))
+
+    def _set_row_vector(self, rownum, vector):
+        """set row with data from vector"""
+        self.data[rownum*4] = vector[0]
+        self.data[rownum*4+1] = vector[1]
+        self.data[rownum*4+2] = vector[2]
+        self.data[rownum*4+3] = vector[3]
+
+    def _get_row_vector(self, rownum):
+        return(Vector(self.data[rownum*4: rownum*4+4]))
 
     def __mul__(self, scalar):
         matrix = self.copy()
@@ -214,24 +311,75 @@ class Matrix3d(object):
             self.data[counter] += other[counter]
         return(self)
 
+    def mul_vec(self, vector):
+        """
+        multiply self with vector
+        return type is vector
+
+        multiply 4x4 with 4x1 = 4x1
+        """
+        return(Vector(
+            self._get_row_vector(0).dot(vector),
+            self._get_row_vector(1).dot(vector),
+            self._get_row_vector(2).dot(vector),
+            self._get_row_vector(3).dot(vector)))
+
+    def mul_matrix(self, other):
+        """
+        multiply matrix by matrix
+        only defined for matrices with specific row an column number
+
+        n x k multiplied by k x n is defined
+        n x n multiplied by n x n is also defined
+        | a11 a12 a13 a24 |   | b11 b12 b13 b14 |     | rowa1 . colb1  
+        | a21 a22 a23 a24 | * | b21 b22 b23 b24 | =>  | r2 | * v1 => 
+        | a31 a32 a33 a34 |   | b31 b32 b33 b34 |     | r3 |
+        | a41 a42 a43 a44 |   | b41 b42 b43 b44 |     | r4 |
+        """
+        data = [0.0] * 16
+        for row in range(4):
+            vec_data = [0.0] * 4
+            for col in range(4):
+                data[row*4 + col] = self._get_row_vector(row).dot(other._get_col_vector(col))
+        return(Matrix3d(data))
+
+            
+
 
 class TestVector(unittest.TestCase):
 
     testclass = Vector
+
+    NullMatrix = Matrix3d((0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),)
 
     def test_init(self):
         result = str(self.testclass(1, 2, 3, 1))
         self.assertEqual(result, "[1.000000, 2.000000, 3.000000, 1.000000]")
 
     def test_matrix(self):
-        result = Matrix3d()
         result = Utils3d.get_identity_matrix()
         identity = Utils3d.get_identity_matrix()
-        print result
+        print "A:\n", result
         result *= 2
-        print result
+        print "A*2:\n", result
         result += identity
-        print result
+        print "A+I:\n", result
+        rot_x = Utils3d.get_rot_x_matrix(1)
+        print "R:\n", rot_x
+        print "R Column Vector 1:\n", rot_x._get_col_vector(1)
+        print "R RowVector 2:\n", rot_x._get_row_vector(2)
+        print "I * R :\n", identity.mul_matrix(rot_x)
+        print "R * I :\n", rot_x.mul_matrix(identity)
+        degree = math.pi/180
+        t = Utils3d.get_rot_x_matrix(degree)
+        t = t.mul_matrix(Utils3d.get_rot_z_matrix(degree))
+        t = t.mul_matrix(Utils3d.get_rot_y_matrix(degree))
+        print "T : \n", t
+        v = Vector(1, 0, 0, 0)
+        for i in range(5):
+            v = t.mul_vec(v)
+            print "V : ", v
+            print "V.length() : ", v.length()
 
     def test_projection(self):
         obj = self.testclass(1, 2, 3, 1)

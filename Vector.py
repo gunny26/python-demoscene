@@ -138,7 +138,7 @@ class Vector(object):
 
     def dot(self, other):
         """dot product of self and other vector"""
-        return(self.x * other.x + self.y * other.y + self.z * other.z)
+        return(self.x * other.x + self.y * other.y + self.z * other.z + self.h * other.h)
 
     def cross(self, other):
         """cross product of self an other vector"""
@@ -221,6 +221,22 @@ class Utils3d(object):
             (   0, 1,   0, 0),
             (-sin, 0, cos, 0),
             (   0, 0,   0, 1)
+            ))
+
+    @staticmethod
+    def get_shift_matrix(x, y, z):
+        """
+        return transformation matrix to shift vector
+        | 0  0  0  x|
+        | 0  0  0  y|
+        | 0  0  0  z|
+        | 0  0  0  1|
+        """
+        return(Matrix3d(
+            ( 1, 0, 0, 0),
+            ( 0, 1, 0, 0),
+            ( 0, 0, 1, 0),
+            ( x, y, z, 1)
             ))
 
 
@@ -326,7 +342,7 @@ class Matrix3d(object):
 
     def mul_matrix(self, other):
         """
-        multiply matrix by matrix
+        multiply self by matrix of same dimension (4x4)
         only defined for matrices with specific row an column number
 
         n x k multiplied by k x n is defined
@@ -343,8 +359,6 @@ class Matrix3d(object):
                 data[row*4 + col] = self._get_row_vector(row).dot(other._get_col_vector(col))
         return(Matrix3d(data))
 
-            
-
 
 class TestVector(unittest.TestCase):
 
@@ -357,6 +371,7 @@ class TestVector(unittest.TestCase):
         self.assertEqual(result, "[1.000000, 2.000000, 3.000000, 1.000000]")
 
     def test_matrix(self):
+        """basic matrix functions"""
         result = Utils3d.get_identity_matrix()
         identity = Utils3d.get_identity_matrix()
         print "A:\n", result
@@ -364,22 +379,53 @@ class TestVector(unittest.TestCase):
         print "A*2:\n", result
         result += identity
         print "A+I:\n", result
-        rot_x = Utils3d.get_rot_x_matrix(1)
-        print "R:\n", rot_x
-        print "R Column Vector 1:\n", rot_x._get_col_vector(1)
-        print "R RowVector 2:\n", rot_x._get_row_vector(2)
-        print "I * R :\n", identity.mul_matrix(rot_x)
-        print "R * I :\n", rot_x.mul_matrix(identity)
-        degree = math.pi/180
-        t = Utils3d.get_rot_x_matrix(degree)
-        t = t.mul_matrix(Utils3d.get_rot_z_matrix(degree))
-        t = t.mul_matrix(Utils3d.get_rot_y_matrix(degree))
-        print "T : \n", t
-        v = Vector(1, 0, 0, 0)
-        for i in range(5):
-            v = t.mul_vec(v)
-            print "V : ", v
-            print "V.length() : ", v.length()
+
+    def test_rotation(self):
+        """test rotation transformation"""
+        # original vector point to 0 degree in X-Y coordinates
+        vector = Vector(1, 0, 0, 1)
+        # print "Original Vector", vector
+        identity = Utils3d.get_identity_matrix()
+        # should rotate about math.pi = 180 degrees on X-Y Plane counter-clockwise
+        # so we need Rotation Matrix around Z-axis
+        rot_x = Utils3d.get_rot_z_matrix(math.pi)
+        # print "Rotation matrix: \n", rot_x
+        t = rot_x.mul_vec(vector)
+        # print "Rotated vector: ", t
+        self.assertEqual(t.length(), 1)
+        # this is maybe not exactly equal
+        self.assertTrue(-1.0-1e10 < t.x < -1+1e10)
+        self.assertTrue(0.0-1e10 < t.y < 0+1e10)
+        self.assertTrue(0.0-1e10 < t.z < 0+1e10)
+        self.assertTrue(1.0-1e10 < t.h < 1+1e10)
+
+    def test_basis(self):
+        """test change of basis transformations"""
+        vector = Vector(16, 9, 0, 1)
+        print "vector in standard basis", vector
+        # alternate basis Matrix,
+        # represent 16:9 aspect ration
+        y_ratio = 16.0/9.0
+        alt_basis = Matrix3d(
+            Vector(1, 0, 0, 0),
+            Vector(0, y_ratio, 0, 0),
+            Vector(0, 0, 1, 0),
+            Vector(0, 0, 0, 1))
+        # represent  vector with respect to basis alt_basis
+        t = alt_basis.mul_vec(vector)
+        print "vector in alternate basis: ", t
+        # this should be nearly
+        self.assertEqual(t, Vector(16, 16, 0, 1))
+
+    def test_shift(self):
+        """shift vector with transformation matrix"""
+        vector = Vector(1, 0, 0, 1)
+        # this should shift X Axis about 2
+        shift_matrix = Utils3d.get_shift_matrix(2, 0, 0)
+        # calucalte linear transformation A*v
+        t = shift_matrix.mul_vec(vector)
+        # result should be shifted about 2 on x-axis
+        self.assertEqual(t, Vector(3, 0, 0, 1))
 
     def test_projection(self):
         obj = self.testclass(1, 2, 3, 1)
@@ -419,7 +465,7 @@ class TestVector(unittest.TestCase):
 
     def test_dot(self):
         obj = self.testclass(1, 2, 3, 1)
-        self.assertEqual(obj.dot(self.testclass(1, 2, 3, 1)), 14)
+        self.assertEqual(obj.dot(self.testclass(1, 2, 3, 1)), 15)
 
     def test_cross(self):
         obj = self.testclass(1, 0, 0, 1)

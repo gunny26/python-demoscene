@@ -254,6 +254,12 @@ class Matrix3d(object):
         elif len(args) == 1 and hasattr(args[0], "__getitem__"):
             self.data = args[0]
 
+    def __getstate__(self):
+        return(self.data)
+
+    def __setstate__(self, data):
+        self.data = data
+
     def __repr__(self):
         sb = "Matrix3d("
         for row in range(4):
@@ -304,8 +310,8 @@ class Matrix3d(object):
         return(Vector(self.data[rownum*4: rownum*4+4]))
 
     def __mul__(self, scalar):
-        matrix = self.copy()
-        for counter in range[16]:
+        matrix = Matrix3d(self.__getstate__())
+        for counter in range(16):
             matrix[counter] *= scalar
         return(matrix)
 
@@ -313,6 +319,18 @@ class Matrix3d(object):
         """multiply matrix with scalar"""
         for counter in range(16):
             self.data[counter] *= scalar 
+        return(self)
+
+    def __div__(self, scalar):
+        matrix = Matrix3d(self.__getstate__())
+        for counter in range(16):
+            matrix[counter] /= scalar
+        return(matrix)
+
+    def __idiv__(self, scalar):
+        """multiply matrix with scalar"""
+        for counter in range(16):
+            self.data[counter] /= scalar 
         return(self)
 
     def __add__(self, other):
@@ -360,6 +378,252 @@ class Matrix3d(object):
         return(Matrix3d(data))
 
 
+    def determinant(self):
+        """
+        return determinant of self
+        | 0   1  2  3 |
+        | 4   5  6  7 |
+        | 8   9 10 11 |
+        | 12 13 14 15 |
+
+        """
+        # cross out a11
+        det = self[0] * (
+                self[5] * self[10] * self[15] +
+                self[6] * self[11] * self[13] +
+                self[7] * self[9]  * self[14])
+        # cross out a12
+        det += self[1] * (
+                self[6] * self[11] * self[12] +
+                self[7] * self[8]  * self[14] +
+                self[4] * self[10] * self[15])
+        # cross out a13
+        det += self[2] * (
+                self[7] * self[8] * self[13] +
+                self[4] * self[9] * self[15] +
+                self[5] * self[11] * self[12])
+        # cross out a14
+        det += self[3] * (
+                self[4] * self[9] * self[14] +
+                self[5] * self[10] * self[12] +
+                self[6] * self[8] * self[13])
+        # minus 
+        # cross out a11
+        det -= self[0] * (
+                self[5] * self[11] * self[14] -
+                self[6] * self[9] * self[15] -
+                self[7] * self[10] * self[13])
+        # cross out a12
+        det -= self[1] * (
+                self[6] * self[8] * self[15] -
+                self[7] * self[10] * self[12] -
+                self[4] * self[11] * self[14])
+        # cross out a13
+        det -= self[2] * (
+                self[7] * self[9] * self[12] -
+                self[4] * self[11] * self[14] -
+                self[5] * self[8] * self[15])
+        # cross out a14
+        det -= self[3] * (
+                self[4] * self[10] * self[13] -
+                self[5] * self[8] * self[14] -
+                self[6] * self[9] * self[12])
+        return(float(det))
+
+    def inverse(self):
+        """
+        return determinant of self
+        | 0   1  2  3 |
+        | 4   5  6  7 |
+        | 8   9 10 11 |
+        | 12 13 14 15 |
+
+        http://www.mathsisfun.com/algebra/matrix-inverse-minors-cofactors-adjugate.html
+        """
+        det = self.determinant()
+        if det != 0:
+            adjugate = Matrix3d([
+                # b11
+                #  5  6  7
+                #  9 10 11
+                # 13 14 15
+                self[5]  * self[10] * self[15] +
+                self[6]  * self[11] * self[13] +
+                self[7]  * self[9]  * self[14] -
+                self[5]  * self[11] * self[14] -
+                self[6]  * self[9]  * self[15] -
+                self[7]  * self[10] * self[13]
+                ,
+                #b12
+                #  4  5  6
+                #  8 10 11
+                # 12 14 15
+                self[6]  * self[11] * self[12] +
+                self[7]  * self[8]  * self[14] +
+                self[4]  * self[10] * self[15] -
+                self[6]  * self[8]  * self[15] -
+                self[7]  * self[10] * self[12] -
+                self[4]  * self[11] * self[14]
+                ,
+                #b13
+                #  7  4  5
+                # 11  8  9
+                # 15 12 13
+                self[7]  * self[8]  * self[13] +
+                self[4]  * self[9]  * self[15] +
+                self[5]  * self[11] * self[12] -
+                self[7]  * self[9]  * self[12] -
+                self[4]  * self[11] * self[13] -
+                self[5]  * self[8]  * self[15]
+                ,
+                #b14
+                #  4  5  6
+                #  8  9 10
+                # 12 13 14
+                self[4]  * self[9]  * self[14] +
+                self[5]  * self[10] * self[12] +
+                self[6]  * self[8]  * self[13] -
+                self[4]  * self[10] * self[13] -
+                self[5]  * self[8]  * self[14] -
+                self[6]  * self[9]  * self[12]
+                ,
+                #b21
+                #  1  2  3
+                #  9 10 11
+                # 13 14 15
+                self[1]  * self[10] * self[15] +
+                self[2]  * self[11] * self[13] +
+                self[3]  * self[9]  * self[14] -
+                self[1]  * self[11] * self[14] -
+                self[2]  * self[9]  * self[15] -
+                self[3]  * self[10] * self[13]
+                ,
+                #b22
+                #  0  2  3
+                #  8 10 11
+                # 12 14 15
+                self[2]  * self[11] * self[12] +
+                self[3]  * self[8]  * self[14] +
+                self[0]  * self[10] * self[15] -
+                self[2]  * self[8]  * self[15] -
+                self[3]  * self[10] * self[12] -
+                self[0]  * self[11] * self[14]
+                ,
+                #b23
+                #  0  1  3
+                #  4  9 11
+                # 12 13 15
+                self[3]  * self[8]  * self[14] +
+                self[0]  * self[9]  * self[15] +
+                self[1]  * self[11] * self[12] -
+                self[3]  * self[9]  * self[12] -
+                self[0]  * self[11] * self[13] -
+                self[1]  * self[8]  * self[15]
+                ,
+                #b24
+                #  0  1  2
+                #  8  9 10
+                # 12 13 14
+                self[0]  * self[9]  * self[14] +
+                self[1]  * self[10] * self[12] +
+                self[2]  * self[8]  * self[13] -
+                self[0]  * self[10] * self[13] -
+                self[1]  * self[8]  * self[14] -
+                self[2]  * self[9]  * self[12]
+                ,
+                #b31
+                #  1  2  3
+                #  5  6  7
+                # 13 14 15
+                self[1]  * self[6]  * self[15] +
+                self[2]  * self[7]  * self[13] +
+                self[3]  * self[5]  * self[14] -
+                self[1]  * self[7]  * self[14] -
+                self[2]  * self[5]  * self[15] -
+                self[3]  * self[6]  * self[13]
+                ,
+                #b32
+                #  0  2  3
+                #  4  6  7
+                # 12 14 15
+                self[0]  * self[6]  * self[15] +
+                self[2]  * self[7]  * self[12] +
+                self[3]  * self[4]  * self[14] -
+                self[0]  * self[7]  * self[14] -
+                self[2]  * self[4]  * self[15] -
+                self[3]  * self[6]  * self[12]
+                ,
+                #b33
+                #  0  1  3
+                #  4  5  7
+                # 12 13 15
+                self[0]  * self[5]  * self[15] +
+                self[1]  * self[7]  * self[12] +
+                self[3]  * self[4]  * self[13] -
+                self[0]  * self[7]  * self[13] -
+                self[1]  * self[4]  * self[15] -
+                self[3]  * self[5]  * self[12]
+                ,
+                #b34
+                #  0  1  2
+                #  4  5  6
+                # 12 13 14
+                self[0]  * self[5]  * self[14] +
+                self[1]  * self[6]  * self[12] +
+                self[2]  * self[4]  * self[13] -
+                self[0]  * self[6]  * self[13] -
+                self[1]  * self[4]  * self[14] -
+                self[2]  * self[5]  * self[12]
+                ,
+                #b41
+                #  1  2  3
+                #  5  6  7
+                #  9 10 11
+                self[1]  * self[6]  * self[11] +
+                self[2]  * self[7]  * self[9] +
+                self[3]  * self[5]  * self[10] -
+                self[1]  * self[7]  * self[10] -
+                self[2]  * self[5]  * self[11] -
+                self[3]  * self[6]  * self[9]
+                ,
+                #b42
+                #  2  3  0
+                #  6  7  4
+                # 10 11  8
+                self[2]  * self[7]  * self[4] +
+                self[3]  * self[4]  * self[10] +
+                self[0]  * self[6]  * self[11] -
+                self[2]  * self[4]  * self[11] -
+                self[3]  * self[6]  * self[8] -
+                self[0]  * self[7]  * self[10]
+                ,
+                #b43
+                #  3  0  1
+                #  7  4  5
+                # 11  8  9
+                self[3]  * self[4]  * self[9] +
+                self[0]  * self[5]  * self[11] +
+                self[1]  * self[7]  * self[8] -
+                self[3]  * self[5]  * self[8] -
+                self[0]  * self[7]  * self[9] -
+                self[1]  * self[4]  * self[11]
+                ,
+                #b44
+                #  0  1  2
+                #  4  5  6
+                #  8  9 10
+                self[0]  * self[5]  * self[10] +
+                self[1]  * self[6]  * self[8] +
+                self[2]  * self[4]  * self[9] -
+                self[0]  * self[6]  * self[9] -
+                self[1]  * self[4]  * self[10] -
+                self[2]  * self[5]  * self[8]
+                ])
+            # print adjugate
+            return(adjugate / det)
+        raise(StandarError("Determinant is Zero"))
+
+
 class TestVector(unittest.TestCase):
 
     testclass = Vector
@@ -380,6 +644,44 @@ class TestVector(unittest.TestCase):
         result += identity
         print "A+I:\n", result
 
+    def test_determinant(self):
+        identity = Utils3d.get_identity_matrix()
+        det = identity.determinant()
+        #print "Determinant of Identity Matrix: ", det
+        self.assertEqual(det, 1.0)
+        matrix = Matrix3d(
+            Vector(1, 0, 0, 0),
+            Vector(0, 2, 0, 0),
+            Vector(0, 0, 3, 0),
+            Vector(0, 0, 0, 1))
+        det = matrix.determinant()
+        #print "Determinant of test matrix: ", det
+        self.assertEqual(det, 6.0)
+        inv = matrix.inverse()
+        #print "Inverse of test matrix:\n", inv
+        #self.assertEqual(inv, Matrix3d(
+        #    Vector(1, 0, 0, 0),
+        #    Vector(0, 0.5, 0, 0),
+        #    Vector(0, 0, 1.0/3.0, 0),
+        #    Vector(0, 0, 0, 1)))
+
+    def test_change_of_basis(self):
+        vector = Vector(16, 9, 0, 1)
+        identiy = Utils3d.get_identity_matrix()
+        rot_z = Utils3d.get_rot_z_matrix(1)
+        y_ratio = 16.0/9.0
+        alt_basis = Matrix3d(
+            Vector(1, 0, 0, 0),
+            Vector(0, y_ratio, 0, 0),
+            Vector(0, 0, 1, 0),
+            Vector(0, 0, 0, 1))
+        alt_basis_inv = alt_basis.inverse()
+        # these two vectors should be the same
+        result_1 = alt_basis_inv.mul_vec(rot_z.mul_vec(vector))
+        print "C⁻¹(T(v)): ", result_1
+        result_2 = rot_z.mul_vec(alt_basis_inv.mul_vec(vector))
+        print "T(C⁻¹(v)): ", result_2
+ 
     def test_rotation(self):
         """test rotation transformation"""
         # original vector point to 0 degree in X-Y coordinates
@@ -406,13 +708,14 @@ class TestVector(unittest.TestCase):
         # alternate basis Matrix,
         # represent 16:9 aspect ration
         y_ratio = 16.0/9.0
-        alt_basis = Matrix3d(
+        basis = Matrix3d(
             Vector(1, 0, 0, 0),
             Vector(0, y_ratio, 0, 0),
             Vector(0, 0, 1, 0),
             Vector(0, 0, 0, 1))
         # represent  vector with respect to basis alt_basis
-        t = alt_basis.mul_vec(vector)
+        basis_inv = basis.inverse()
+        t = basis.mul_vec(vector)
         print "vector in alternate basis: ", t
         # this should be nearly
         self.assertEqual(t, Vector(16, 16, 0, 1))

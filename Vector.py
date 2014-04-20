@@ -150,6 +150,9 @@ class Vector(object):
     def normalized(self):
         return(self / self.length())
 
+    def project2d(self, shift):
+        return((self.x / self.z + shift[0], self.y / self.z + shift[1]))
+
 
 class Utils3d(object):
 
@@ -201,7 +204,7 @@ class Utils3d(object):
         return(Matrix3d(
             (cos, -sin, 0, 0),
             (sin,  cos, 0, 0),
-            (  0,    0, 0, 0),
+            (  0,    0, 1, 0),
             (  0,    0, 0, 1)))
 
     @staticmethod
@@ -238,6 +241,76 @@ class Utils3d(object):
             ( 0, 0, 1, 0),
             ( x, y, z, 1)
             ))
+
+    @staticmethod
+    def get_scale_matrix(x, y, z):
+        """
+        return transformation matrix to scale vector
+        | x  0  0  0|
+        | 0  y  0  0|
+        | 0  0  z  0|
+        | 0  0  0  1|
+        """
+        return(Matrix3d(
+            ( x, 0, 0, 0),
+            ( 0, y, 0, 0),
+            ( 0, 0, z, 0),
+            ( 0, 0, 0, 1)
+            ))
+
+    @staticmethod
+    def get_rectangle_points():
+        """basic rectangle vertices"""
+        points = [
+            Vector(-1,  1, 0, 1),
+            Vector( 1,  1, 0, 1),
+            Vector( 1, -1, 0, 1),
+            Vector(-1, -1, 0, 1),
+            Vector(-1,  1, 0, 1),
+            ]
+        return(points)
+
+    @staticmethod
+    def get_triangle_points():
+        """basic triangle vertices"""
+        points = [
+            Vector(-1,  0, 0, 1),
+            Vector( 0,  1, 0, 1),
+            Vector( 1,  0, 0, 1),
+            Vector(-1,  0, 0, 1),
+            ]
+        return(points)
+
+    @staticmethod
+    def get_cube_points():
+        points = [
+            # front face z stays the same
+            Vector(-1,  1, 1, 1), #left front top corner
+            Vector( 1,  1, 1, 1),
+            Vector( 1, -1, 1, 1),
+            Vector(-1, -1, 1, 1), # left front bottom corner
+            # left face x stays the same
+            Vector(-1, -1,  1, 1), 
+            Vector( 1, -1, -1, 1),
+            Vector( 1, -1,  1, 1),
+            Vector(-1, -1, -1, 1),
+            # right face y stays the same
+            Vector(-1,  1, -1, 1),
+            Vector( 1,  1, -1, 1),
+            Vector( 1, -1, -1, 1),
+            Vector(-1, -1, -1, 1),
+            # top face y stays the same
+            Vector(-1,  1, -1, 1),
+            Vector( 1,  1, -1, 1),
+            Vector( 1, -1, -1, 1),
+            Vector(-1, -1, -1, 1),
+            # bottom face y stays the same
+            Vector(-1,  1, -1, 1),
+            Vector( 1,  1, -1, 1),
+            Vector( 1, -1, -1, 1),
+            Vector(-1, -1, -1, 1),
+           ]
+        return(points)
 
 
 class Matrix3d(object):
@@ -624,11 +697,61 @@ class Matrix3d(object):
         raise(StandarError("Determinant is Zero"))
 
 
+class Polygon(object):
+    """this polygon consists of n-vertices"""
+
+    def __init__(self, vertices):
+        # vertices should be list of Vector Objects
+        self.vertices = vertices
+
+    def get_avg_z(self):
+        avg_z = 0.0
+        for vector in self.vertices:
+            avg_z += vector.z
+        return(avg_z / len(self.vertices))
+
+    def itransform(self, matrix):
+        """apply transformation to all vertices"""
+        old_vertice = self.vertices[0]
+        for counter in range(len(self.vertices)):
+            self.vertices[counter] = matrix.mul_vec(self.vertices[counter])
+
+    def transform(self, matrix):
+        """apply transformation to all vertices"""
+        new_vertices = []
+        for vector in self.vertices:
+            new_vertices.append(matrix.mul_vec(vector))
+        return(Polygon(new_vertices))
+
+    def projected(self, shift):
+        """return point list in 2d for polygon method of pygame.draw"""
+        vertices_2d = []
+        for vertice in self.vertices:
+            vertices_2d.append(vertice.project2d(shift=shift))
+        return(vertices_2d)
+
+    def __lt__(self, other):
+        return self.get_avg_z() < other.get_avg_z()
+
+    def __gt__(self, other):
+        return self.get_avg_z() > other.get_avg_z()
+
+    def __str__(self):
+        sb = ""
+        for vertice in self.vertices:
+            sb += (str(vertice))
+        return(sb)
+
+
 class TestVector(unittest.TestCase):
 
     testclass = Vector
-
-    NullMatrix = Matrix3d((0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),(0.000000, 0.000000, 0.000000, 0.000000),)
+    NullMatrix = Matrix3d(
+            (0.000000, 0.000000, 0.000000, 0.000000),
+            (0.000000, 0.000000, 0.000000, 0.000000),
+            (0.000000, 0.000000, 0.000000, 0.000000),
+            (0.000000, 0.000000, 0.000000, 0.000000),
+        )
 
     def test_init(self):
         result = str(self.testclass(1, 2, 3, 1))
@@ -659,6 +782,7 @@ class TestVector(unittest.TestCase):
         self.assertEqual(det, 6.0)
         inv = matrix.inverse()
         #print "Inverse of test matrix:\n", inv
+        # TODO: only nearly the same not equal
         #self.assertEqual(inv, Matrix3d(
         #    Vector(1, 0, 0, 0),
         #    Vector(0, 0.5, 0, 0),
@@ -677,10 +801,12 @@ class TestVector(unittest.TestCase):
             Vector(0, 0, 0, 1))
         alt_basis_inv = alt_basis.inverse()
         # these two vectors should be the same
-        result_1 = alt_basis_inv.mul_vec(rot_z.mul_vec(vector))
-        print "C⁻¹(T(v)): ", result_1
-        result_2 = rot_z.mul_vec(alt_basis_inv.mul_vec(vector))
-        print "T(C⁻¹(v)): ", result_2
+        print "v = ", vector
+        result_1 = alt_basis_inv.mul_vec(vector)
+        print "v1 = C⁻¹(v): ", result_1
+        result_2 = alt_basis.mul_vec(result_1)
+        print "v = C(v1)): ", result_2
+        self.assertEqual(vector, result_2)
  
     def test_rotation(self):
         """test rotation transformation"""
@@ -704,7 +830,7 @@ class TestVector(unittest.TestCase):
     def test_basis(self):
         """test change of basis transformations"""
         vector = Vector(16, 9, 0, 1)
-        print "vector in standard basis", vector
+        #print "vector in standard basis", vector
         # alternate basis Matrix,
         # represent 16:9 aspect ration
         y_ratio = 16.0/9.0
@@ -716,7 +842,7 @@ class TestVector(unittest.TestCase):
         # represent  vector with respect to basis alt_basis
         basis_inv = basis.inverse()
         t = basis.mul_vec(vector)
-        print "vector in alternate basis: ", t
+        #print "vector in alternate basis: ", t
         # this should be nearly
         self.assertEqual(t, Vector(16, 16, 0, 1))
 

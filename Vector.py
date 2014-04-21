@@ -136,23 +136,90 @@ class Vector(object):
         """length squared"""
         return(self.x **2 + self.y ** 2 + self.z ** 2)
 
-    def dot(self, other):
-        """dot product of self and other vector"""
+    def dot4(self, other):
+        """
+        homogeneous version, adds also h to dot product
+
+        this version is used in matrix multiplication
+
+        dot product of self and other vector
+        dot product is the projection of one vector to another,
+        for perpedicular vectors the dot prduct is zero
+        for parallell vectors the dot product is the length of the other vector
+        """
         return(self.x * other.x + self.y * other.y + self.z * other.z + self.h * other.h)
 
+    def dot(self, other):
+        """
+        this is the non-homogeneous dot product of self and other,
+        h is set to zero
+
+        dot product of self and other vector
+        dot product is the projection of one vector to another,
+        for perpedicular vectors the dot prduct is zero
+        for parallell vectors the dot product is the length of the other vector
+
+        the dot product of two vectors represents also the sin of the angle
+        between these two vectors.
+        the dot product represents the projection of other onto self
+
+        dot product = cos(theta)
+
+        so theta could be calculates as 
+        theta = acos(dot product)
+        """
+        return(self.x * other.x + self.y * other.y + self.z * other.z)
+
+
     def cross(self, other):
-        """cross product of self an other vector"""
-        return(Vector(self.y * other.z - self.z * other.y, 
+        """
+        cross product of self an other vector
+        the result is a new perpendicular vector to self and other
+
+        the length of the new vector is defined as 
+        |cross product| = |self| * |other| * cos(theta)
+
+        so the angle theta is calculated as follows
+
+        theta = asin(|cross product| / (|self| * | other|))
+
+        if self and other are unit vectors
+
+        |self| = |other| = 1 
+        
+        this simplifies to
+        
+        |cross product| = sin(theta)
+        """
+        return(Vector(
+            self.y * other.z - self.z * other.y, 
             self.z * other.x - self.x * other.z, 
             self.x * other.y - self.y * other.x, 
             self.h))
 
     def normalized(self):
+        """
+        return self with length=1, unit vector
+        """
         return(self / self.length())
+    unit = normalized
 
     def project2d(self, shift):
+        """
+        project self to 2d
+        simply divide x and y with z value
+        """
         return((self.x / self.z + shift[0], self.y / self.z + shift[1]))
 
+    def angle_to(self, other):
+        """
+        angle between self and other Vector object
+        to calculate this, the dot product of self and other is used
+        """
+        v1 = self.normalized()
+        v2 = other.normalized()
+        return(math.acos(v1.dot(v2)))
+ 
 
 class Utils3d(object):
 
@@ -218,12 +285,43 @@ class Utils3d(object):
         |-sin θ    0   cos θ| |z|   |-x sin θ + z cos θ|   |z'|
         """
         cos = math.cos(theta)
+        # substitute sin with cos, but its not clear if this is faster
+        # sin² + cos² = 1
+        # sin = sqrt(1.0 - cos)
         sin = math.sin(theta)
         return(Matrix3d(
             ( cos, 0, sin, 0),
             (   0, 1,   0, 0),
             (-sin, 0, cos, 0),
             (   0, 0,   0, 1)
+            ))
+
+    @staticmethod
+    def get_rot_align(vector1, vector2):
+        """
+        return rotation matrix to rotate vector1 such that
+
+        T(vector1) = vector2
+
+        remember order of vectors:
+        vector1 is the vector to be transformed, not vector 2
+
+        so vector1 is aligned with vector2
+        to do this efficiently, vector1 and vector2 have to be unit vectors
+        look at this website to get detailed explanation of what is done here
+        http://www.iquilezles.org/www/articles/noacos/noacos.htm
+        """
+        # make sure, that bot vectors are unit vectors
+        assert vector1.length_sqrd() == 1
+        assert vector2.length_sqrd() == 1
+        cross = vector2.cross(vector1)
+        dot = vector2.dot(vector1)
+        k = 1.0 / (1.0 + dot)
+        return(Matrix3d(
+            (cross.x * cross.x * k + dot    , cross.y * cross.x * k - cross.z, cross.z * cross.x * k + cross.y, 0),
+            (cross.x * cross.y * k + cross.z, cross.y * cross.y * k + dot    , cross.z * cross.y * k - cross.x, 0),
+            (cross.x * cross.z * k - cross.y, cross.y * cross.z * k + cross.x, cross.z * cross.z * k + dot,     0),
+            (                              0,                               0,                           0,     1),
             ))
 
     @staticmethod
@@ -279,37 +377,6 @@ class Utils3d(object):
             Vector( 1,  0, 0, 1),
             Vector(-1,  0, 0, 1),
             ]
-        return(points)
-
-    @staticmethod
-    def get_cube_points():
-        points = [
-            # front face z stays the same
-            Vector(-1,  1, 1, 1), #left front top corner
-            Vector( 1,  1, 1, 1),
-            Vector( 1, -1, 1, 1),
-            Vector(-1, -1, 1, 1), # left front bottom corner
-            # left face x stays the same
-            Vector(-1, -1,  1, 1), 
-            Vector( 1, -1, -1, 1),
-            Vector( 1, -1,  1, 1),
-            Vector(-1, -1, -1, 1),
-            # right face y stays the same
-            Vector(-1,  1, -1, 1),
-            Vector( 1,  1, -1, 1),
-            Vector( 1, -1, -1, 1),
-            Vector(-1, -1, -1, 1),
-            # top face y stays the same
-            Vector(-1,  1, -1, 1),
-            Vector( 1,  1, -1, 1),
-            Vector( 1, -1, -1, 1),
-            Vector(-1, -1, -1, 1),
-            # bottom face y stays the same
-            Vector(-1,  1, -1, 1),
-            Vector( 1,  1, -1, 1),
-            Vector( 1, -1, -1, 1),
-            Vector(-1, -1, -1, 1),
-           ]
         return(points)
 
 
@@ -426,10 +493,10 @@ class Matrix3d(object):
         multiply 4x4 with 4x1 = 4x1
         """
         return(Vector(
-            self._get_row_vector(0).dot(vector),
-            self._get_row_vector(1).dot(vector),
-            self._get_row_vector(2).dot(vector),
-            self._get_row_vector(3).dot(vector)))
+            self._get_row_vector(0).dot4(vector),
+            self._get_row_vector(1).dot4(vector),
+            self._get_row_vector(2).dot4(vector),
+            self._get_row_vector(3).dot4(vector)))
 
     def mul_matrix(self, other):
         """
@@ -447,7 +514,7 @@ class Matrix3d(object):
         for row in range(4):
             vec_data = [0.0] * 4
             for col in range(4):
-                data[row*4 + col] = self._get_row_vector(row).dot(other._get_col_vector(col))
+                data[row*4 + col] = self._get_row_vector(row).dot4(other._get_col_vector(col))
         return(Matrix3d(data))
 
 
@@ -730,11 +797,63 @@ class Polygon(object):
             vertices_2d.append(vertice.project2d(shift=shift))
         return(vertices_2d)
 
+    def get_normal3(self):
+        """
+        calculate normal vector to polygon
+        the returned result is not normalized
+
+        this version workes only for polygon with 3 vertices
+        given a triangle ABC
+        get v1 = (B-A)
+        get v2 = (C-A)
+        normal = cross(v1 and v2)
+        """
+        # make sure this is only used on triangles
+        assert len(self.vertices) == 3
+        # get at least two vectors on plan
+        v1 = self.vertices[0] - self.vertices[1]
+        v2 = self.vertices[0] - self.vertices[2]
+        normal = v1.cross(v2)
+        return(normal)
+
+    def get_normal(self):
+        """
+        calculate normal vector to polygon
+        the returned result is not normalized
+
+        this is the implementation from 
+        http://www.iquilezles.org/www/articles/areas/areas.htm
+        it workes generally for n-vertices polygons
+        """
+        normal = Vector(0, 0, 0, 1)
+        for index in range(len(self.vertices) - 1):
+            normal += self.vertices[index].cross(self.vertices[index+1])
+        return(normal)
+
+    def get_area(self):
+        """
+        are is defined as the half of the lenght of the polygon normal
+        """
+        normal = self.get_normal()
+        area = normal.length() / 2.0
+        return(area)
+
+    def get_position_vector(self):
+        """
+        return virtual position vector, as
+        average of all axis
+        it should point to the middle of the polygon
+        """
+        pos_vec = Vector(0.0, 0.0, 0.0, 1.0)
+        for vector in self.vertices:
+            pos_vec.x += vector.x
+            pos_vec.y += vector.y
+            pos_vec.z += vector.z
+        return(pos_vec / len(self.vertices))
+
+
     def __lt__(self, other):
         return self.get_avg_z() < other.get_avg_z()
-
-    def __gt__(self, other):
-        return self.get_avg_z() > other.get_avg_z()
 
     def __str__(self):
         sb = ""
@@ -761,11 +880,11 @@ class TestVector(unittest.TestCase):
         """basic matrix functions"""
         result = Utils3d.get_identity_matrix()
         identity = Utils3d.get_identity_matrix()
-        print "A:\n", result
+        #print "A:\n", result
         result *= 2
-        print "A*2:\n", result
+        #print "A*2:\n", result
         result += identity
-        print "A+I:\n", result
+        #print "A+I:\n", result
 
     def test_determinant(self):
         identity = Utils3d.get_identity_matrix()
@@ -851,7 +970,7 @@ class TestVector(unittest.TestCase):
         vector = Vector(1, 0, 0, 1)
         # this should shift X Axis about 2
         shift_matrix = Utils3d.get_shift_matrix(2, 0, 0)
-        # calucalte linear transformation A*v
+        # calculate linear transformation A*v
         t = shift_matrix.mul_vec(vector)
         # result should be shifted about 2 on x-axis
         self.assertEqual(t, Vector(3, 0, 0, 1))
@@ -894,7 +1013,7 @@ class TestVector(unittest.TestCase):
 
     def test_dot(self):
         obj = self.testclass(1, 2, 3, 1)
-        self.assertEqual(obj.dot(self.testclass(1, 2, 3, 1)), 15)
+        self.assertEqual(obj.dot(self.testclass(1, 2, 3, 1)), 14)
 
     def test_cross(self):
         obj = self.testclass(1, 0, 0, 1)
@@ -903,6 +1022,43 @@ class TestVector(unittest.TestCase):
         obj = self.testclass(1, 0, 0, 1)
         result = obj.cross(self.testclass(0, 1, 0, 1))
         self.assertEqual(result, self.testclass(0.000000, 0.000000, 1.000000, 1.000000))
+        obj1 = self.testclass(-1, 1, 0, 1).unit()
+        self.assertTrue( 1.0 - 1e-10 < obj1.length() < 1.0 + 1e-10)
+        obj2 = self.testclass(1, 1, 0, 1).unit()
+        self.assertTrue( 1.0 - 1e-10 < obj1.length() < 1.0 + 1e-10)
+        result = obj1.cross(obj2)
+        self.assertTrue(
+                0.0 - 1e-10 < abs(result.length() - math.sin(math.pi/2)) < 0.0 + 1e-10)
+
+    def test_rot_align(self):
+        obj1 = self.testclass(1, 0, 0, 1)
+        obj2 = self.testclass(0, 1, 0, 1)
+        transformation = Utils3d.get_rot_align(obj1, obj2)
+        print transformation
+        result = transformation.mul_vec(obj1)
+        print result
+        self.assertEqual(result, obj2)
+
+    def test_angle(self):
+        # parallel vectors
+        obj1 = self.testclass(1, 0, 0, 1)
+        obj2 = self.testclass(1, 0, 0, 1)
+        result = obj1.angle_to(obj2)
+        # should be 0 degree
+        self.assertEqual(result, 0.0)
+        # create perpendicular vector
+        obj1 = self.testclass(1, 0, 0, 1)
+        obj2 = self.testclass(0, 1, 0, 1)
+        cross = obj1.cross(obj2)
+        result = obj1.angle_to(cross)
+        # should be 90 degrees or pi/2
+        self.assertEqual(result, math.pi/2)
+        # two vectors in different directions
+        obj1 = self.testclass(1, 0, 0, 1)
+        obj2 = self.testclass(-1, 0, 0, 1)
+        result = obj1.angle_to(obj2)
+        # should be 180  degree
+        self.assertEqual(result, math.pi)
 
     def test_eq(self):
         obj1 = self.testclass(1, 2, 3, 1)

@@ -52,10 +52,17 @@ class Mesh(object):
         # apply linear transformations to vetices
         for face in sorted(self.faces, reverse=True):
             newface = face.transform(self.transformations[self.frames % len(self.transformations)])
-            avg_z = int(abs(newface.get_avg_z()) * 280000 + 256)
-            
-            #color = pygame.Color(0, int(avg_z), 0, 255)
-            color = pygame.Color(avg_z)
+            # light from above
+            light_position = Vector(0, 0, 10, 1)
+            pos_vec = newface.get_position_vector()
+            v_light = pos_vec - light_position
+            normal = newface.get_normal()
+            light_angle = normal.angle_to(v_light)
+
+            # angle to light source in radians, between 0 and math.pi
+            normal_color = int(light_angle * 255/math.pi)
+            avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
+            color = pygame.Color(normal_color, normal_color, avg_z, 255)
             pygame.draw.polygon(self.surface, color, newface.projected(shift=self.origin), 0)
         self.frames += 1 
 
@@ -146,8 +153,8 @@ class TriangleRotXYZ(TriangleBase):
         in this example there are 360 transformations
         """
         # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(200, 200, 1)
-        shift_matrix = Utils3d.get_shift_matrix(0, 0, -20)
+        scale_matrix = Utils3d.get_scale_matrix(400, 400, 1)
+        shift_matrix = Utils3d.get_shift_matrix(0, 0, -15)
         alt_basis = Matrix3d(
             Vector(1, 0, 0, 0),
             Vector(0, 16/9, 0, 0),
@@ -225,12 +232,12 @@ class CubeRotXYZ(CubeBase):
         in this example there are 360 transformations
         """
         # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(200, 200, 1)
-        shift_matrix = Utils3d.get_shift_matrix(0, 0, -20)
+        scale_matrix = Utils3d.get_scale_matrix(400, 400, 1)
+        shift_matrix = Utils3d.get_shift_matrix(0, 0, -15)
         alt_basis = Matrix3d(
             Vector(1, 0, 0, 0),
             Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
+            Vector(0, 0, 1, -5),
             Vector(0 ,0 ,0 ,1),
             )
         alt_basis_inv = alt_basis.inverse()
@@ -352,13 +359,13 @@ def test():
         surface = pygame.display.set_mode((600, 600))
         pygame.init()
         objects = (
-            CubeRotX(surface, origin=(150, 300)),
-            CubeRotY(surface, origin=(300, 300)),
-            CubeRotZ(surface, origin=(450, 300)),
+            #CubeRotX(surface, origin=(150, 300)),
+            #CubeRotY(surface, origin=(300, 300)),
+            #CubeRotZ(surface, origin=(450, 300)),
             CubeRotXYZ(surface, origin=(300, 150)),
-            CubeRotXYZ(surface, origin=(300, 450)),
-            TriangleRotXYZ(surface, origin=(150, 450)),
-            PyramideRotXYZ(surface, origin=(350, 450)),
+            #CubeRotXYZ(surface, origin=(300, 450)),
+            #TriangleRotXYZ(surface, origin=(150, 450)),
+            #PyramideRotXYZ(surface, origin=(350, 450)),
             )
         clock = pygame.time.Clock()       
         pause = False

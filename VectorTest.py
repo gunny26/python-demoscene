@@ -3,6 +3,7 @@
 import pygame
 import sys
 import math
+import time
 # own modules
 from Vector import Vector as Vector
 from Vector import Matrix3d as Matrix3d
@@ -21,19 +22,18 @@ class Mesh(object):
         self.surface = surface
         self.origin = origin
         self.frames = 0
+        # initialze list of transformations applied to every face
         if transformations is None:
             self.transformations = []
             self.initialize_transformations()
         else:
             self.transformations = transformations
+        # initialize list of polygons for this mesh
         if polygons is None:
-            self.faces = []
+            self.polygons = []
             self.initialize_points()
         else:
-            self.faces = polygons
-        # initialze mash
-        #self.initialize_points()
-        # initialize a number of transformations on every polygon
+            self.polygons = polygons
 
     def initialize_points(self):
         """
@@ -58,21 +58,26 @@ class Mesh(object):
 
         finally painting on surface is called
         """
+        # light from above
+        light_position = Vector(0, 0, 10, 1)
         # apply linear transformations to vetices
-        for face in sorted(self.faces, reverse=True):
-            newface = face.transform(self.transformations[self.frames % len(self.transformations)])
-            # light from above
-            light_position = Vector(0, 0, 10, 1)
-            pos_vec = newface.get_position_vector()
+        # daw faces fom lowe z to higher
+        for polygon in sorted(self.polygons, reverse=True):
+            # apply transformation
+            newpolygon = polygon.transform(self.transformations[self.frames % len(self.transformations)])
+            # get new position vector
+            pos_vec = newpolygon.get_position_vector()
+            # calculate vector from face to lightsource
             v_light = pos_vec - light_position
-            normal = newface.get_normal()
+            # get the normal of the face
+            normal = newpolygon.get_normal()
+            # calculate angle between face normal and vector to light source
             light_angle = normal.angle_to(v_light)
-
             # angle to light source in radians, between 0 and math.pi
             normal_color = int(light_angle * 255/math.pi)
-            avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
+            #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
             color = pygame.Color(normal_color, normal_color, normal_color, 255)
-            pygame.draw.polygon(self.surface, color, newface.projected(shift=self.origin), 0)
+            pygame.draw.polygon(self.surface, color, newpolygon.projected(shift=self.origin), 0)
         self.frames += 1 
 
 
@@ -198,7 +203,8 @@ class Transformer(object):
 def test():
     """test"""
     try:
-        fps = 50
+        total_starttime = time.time()
+        #fps = 150
         surface = pygame.display.set_mode((600, 600))
         pygame.init()
         cube = Transformer.get_cube_polygons()
@@ -215,48 +221,18 @@ def test():
                                     scale=(200,200,1), 
                                     shift=(0, 0, -20), 
                                     aspect=(16, 9)),
-                                degrees=((x-y)/50, (y-x)/50, 3),
+                                degrees=((x-y+20)/50, (y-x+40)/50, 3),
                                 steps=360),
                         polygons = cube)
                 )
-        objects1 = (
-            #CubeRotX(surface, origin=(150, 300)),
-            #CubeRotY(surface, origin=(300, 300)),
-            #CubeRotZ(surface, origin=(450, 300)),
-            Mesh(
-                surface,
-                origin=(150, 300), 
-                transformations=
-                    Transformer.get_rot_matrix(
-                        Transformer.get_scale_rot_matrix(
-                            scale=(200,200,1), 
-                            shift=(0, 0, -20), 
-                            aspect=(16, 9)),
-                        degrees=(1, 2, 3),
-                        steps=360),
-                polygons = cube),
-             Mesh(
-                surface,
-                origin=(300, 300), 
-                transformations=
-                    Transformer.get_rot_matrix(
-                        Transformer.get_scale_rot_matrix(
-                            scale=(220, 220, 1), 
-                            shift=(0, 0, -10), 
-                            aspect=(16, 9)),
-                        degrees=(3, 2, 1),
-                        steps=360),
-                polygons = cube),
-            
-            #CubeRotXYZ(surface, origin=(300, 450)),
-            #TriangleRotXYZ(surface, origin=(150, 450)),
-            #PyramideRotXYZ(surface, origin=(350, 450)),
-            )
         clock = pygame.time.Clock()       
         pause = False
         color = pygame.Color(255, 255, 255, 255)
-        while True:
-            clock.tick(fps)
+        print "Matrix precalculations done in %s seconds" % (time.time()-total_starttime)
+        anim_starttime = time.time()
+        frames = 100
+        while frames > 0:
+            #clock.tick(fps)
             events = pygame.event.get()  
             for event in events:  
                 if event.type == pygame.QUIT:  
@@ -285,6 +261,10 @@ def test():
                 for thing in objects:
                     thing.update()
                 pygame.display.flip()
+            frames -= 1
+        duration = time.time() - anim_starttime
+        print "Done 100 Frames in %f seonds, average %f fps" % (duration, 100/duration)
+        print "Whole program duration %f seconds" % (time.time()-total_starttime)
     except KeyboardInterrupt:
         print 'shutting down'
 

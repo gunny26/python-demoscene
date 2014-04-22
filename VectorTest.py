@@ -5,10 +5,10 @@ import sys
 import math
 import time
 # own modules
-from Vector import Vector as Vector
-from Vector import Matrix3d as Matrix3d
-from Vector import Utils3d as Utils3d
-from Vector import Polygon as Polygon
+from VectorOld import Vector as Vector
+from VectorOld import Matrix3d as Matrix3d
+from VectorOld import Utils3d as Utils3d
+from VectorOld import Polygon as Polygon
 
 
 class Mesh(object):
@@ -270,3 +270,12 @@ def test():
 
 if __name__ == "__main__":
     test()
+    sys.exit(0)
+    import cProfile
+    import pstats
+    profile = "profiles/%s.profile" % sys.argv[0].split(".")[0]
+    cProfile.runctx( "test()", globals(), locals(), filename=profile)
+    s = pstats.Stats(profile)
+    s.sort_stats('time')
+    s.print_stats()
+

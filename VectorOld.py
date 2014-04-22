@@ -3,6 +3,7 @@
 
 import unittest
 import math
+import array
 
 class Vector(object):
 
@@ -383,7 +384,7 @@ class Utils3d(object):
 class Matrix3d(object):
 
     def __init__(self, *args):
-        self.data = [0.0] * 16
+        self.data = array.array("d", [0.0] * 16)
         if len(args) == 4:
             self._set_col_vector(0, args[0])
             self._set_col_vector(1, args[1])

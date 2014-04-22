@@ -4,20 +4,26 @@ from Cython.Build import cythonize
 import sys
 
 # set profiling globally
-from Cython.Compiler.Options import directive_defaults
-directive_defaults['profile'] = False
+#from Cython.Compiler.Options import directive_defaults
+#directive_defaults['profile'] = False
 
 # extra compile flags
 extra_compile_args = ["-O3"]
+#extra_compile_args = []
 
-sys.argv.append("build_ext")
-sys.argv.append("--inplace")
+#sys.argv.append("build_ext")
+#sys.argv.append("--inplace")
 
 extensions = [
-    Extension("Vector", ["Vector.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Vector", ["src/Vector.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Matrix3d", ["src/Matrix3d.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Polygon", ["src/Polygon.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Utils3d", ["src/Utils3d.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Mesh", ["src/Mesh.pyx"], extra_compile_args=extra_compile_args),
 ]
 
 setup(
-    name = "python-demoscene",
+    name = "Math3dfx",
+    version = "1.0",
     ext_modules = cythonize(extensions), # accepts a glob pattern
 )

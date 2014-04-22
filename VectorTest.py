@@ -13,7 +13,7 @@ from Vector import Polygon as Polygon
 class Mesh(object):
     """abstract class to represent mesh of polygons"""
 
-    def __init__(self, surface, origin):
+    def __init__(self, surface, origin, transformations=None, polygons=None):
         """
         pygame surface to draw on
         center positon of mesh in 2d space
@@ -21,12 +21,19 @@ class Mesh(object):
         self.surface = surface
         self.origin = origin
         self.frames = 0
-        self.transformations = []
-        self.faces = []
+        if transformations is None:
+            self.transformations = []
+            self.initialize_transformations()
+        else:
+            self.transformations = transformations
+        if polygons is None:
+            self.faces = []
+            self.initialize_points()
+        else:
+            self.faces = polygons
         # initialze mash
-        self.initialize_points()
+        #self.initialize_points()
         # initialize a number of transformations on every polygon
-        self.initialize_transformations()
 
     def initialize_points(self):
         """
@@ -45,9 +52,11 @@ class Mesh(object):
     def update(self):
         """
         called on every frame
-        apply transormation matrix and project every polygon to 2d
+        apply transformation matrix and project every polygon to 2d
         for color avg_z function is used
         polygons are sorted on avg_z value
+
+        finally painting on surface is called
         """
         # apply linear transformations to vetices
         for face in sorted(self.faces, reverse=True):
@@ -62,294 +71,128 @@ class Mesh(object):
             # angle to light source in radians, between 0 and math.pi
             normal_color = int(light_angle * 255/math.pi)
             avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
-            color = pygame.Color(normal_color, normal_color, avg_z, 255)
+            color = pygame.Color(normal_color, normal_color, normal_color, 255)
             pygame.draw.polygon(self.surface, color, newface.projected(shift=self.origin), 0)
         self.frames += 1 
 
-class TriangleBase(Mesh):
 
-    def __init__(self, surface, origin):
-        Mesh.__init__(self, surface, origin)
+class Transformer(object):
 
-    def initialize_points(self):
-        face = Polygon(Utils3d.get_triangle_points())
-        self.faces.append(face)
-
-
-class PyramideBase(Mesh):
-
-    def __init__(self, surface, origin):
-        Mesh.__init__(self, surface, origin)
-
-    def initialize_points(self):
+    @staticmethod
+    def get_pyramid_polygons():
+        polygons = []
         # front
         face = Polygon(Utils3d.get_triangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(-math.pi/4))
         face.itransform(Utils3d.get_shift_matrix(0, 0, 1))
-        self.faces.append(face)
+        polygons.append(face)
         # back
         face = Polygon(Utils3d.get_triangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(math.pi/4))
         face.itransform(Utils3d.get_shift_matrix(0, 0, -1))
-        self.faces.append(face)
+        polygons.append(face)
         # left
         face = Polygon(Utils3d.get_triangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(-math.pi/4))
         face.itransform(Utils3d.get_rot_y_matrix(-math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(1, 0, 0))
-        self.faces.append(face)
+        polygons.append(face)
         # right
         face = Polygon(Utils3d.get_triangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(-math.pi/4))
         face.itransform(Utils3d.get_rot_y_matrix(math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(-1, 0, 0))
-        self.faces.append(face)
+        polygons.append(face)
 
-class PyramideRotXYZ(PyramideBase):
-
-    def __init__(self, surface, origin):
-        PyramideBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
-        """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
-
-        in this example there are 360 transformations
-        """
-        # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(300, 300, 1)
-        shift_matrix = Utils3d.get_shift_matrix(0, 0, -20)
-        alt_basis = Matrix3d(
-            Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
-            Vector(0 ,0 ,0 ,1),
-            )
-        alt_basis_inv = alt_basis.inverse()
-        # combine scale and change of basis to one transformation
-        # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
-            # this part of tranformation is calculated on every step
-            transformation = Utils3d.get_rot_y_matrix(rad_angle)
-            # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
-
-
-
-class TriangleRotXYZ(TriangleBase):
-
-    def __init__(self, surface, origin):
-        TriangleBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
-        """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
-
-        in this example there are 360 transformations
-        """
-        # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(400, 400, 1)
-        shift_matrix = Utils3d.get_shift_matrix(0, 0, -15)
-        alt_basis = Matrix3d(
-            Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
-            Vector(0 ,0 ,0 ,1),
-            )
-        alt_basis_inv = alt_basis.inverse()
-        # combine scale and change of basis to one transformation
-        # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
-            # this part of tranformation is calculated on every step
-            transformation = Utils3d.get_rot_z_matrix(rad_angle).mul_matrix(
-                    Utils3d.get_rot_x_matrix(rad_angle).mul_matrix(
-                        Utils3d.get_rot_y_matrix(rad_angle)))
-            # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
-
-
-class CubeBase(Mesh):
-    """
-    cube is a specific representation of Mesh
-    this clas only defines faces for cube
-    transformations are done in specific classes
-    """
-
-    def __init__(self, surface, origin):
-        Mesh.__init__(self, surface, origin)
-
-    def initialize_points(self):
+    @staticmethod
+    def get_cube_polygons():
         # a cube consist of six faces
         # left
+        polygons = []
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_rot_y_matrix(math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(-1, 0, 0))
-        self.faces.append(face)
+        polygons.append(face)
         # right
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_rot_y_matrix(math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(1, 0, 0))
-        self.faces.append(face)
+        polygons.append(face)
         # bottom
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(0, -1, 0))
-        self.faces.append(face)
+        polygons.append(face)
         # top
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_rot_x_matrix(math.pi/2))
         face.itransform(Utils3d.get_shift_matrix(0, 1, 0))
-        self.faces.append(face)
+        polygons.append(face)
         # front
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_shift_matrix(0, 0, -1))
-        self.faces.append(face)
+        polygons.append(face)
         # back
         face = Polygon(Utils3d.get_rectangle_points())
         face.itransform(Utils3d.get_shift_matrix(0, 0, 1))
-        self.faces.append(face)
+        polygons.append(face)
+        return(polygons)
 
-
-class CubeRotXYZ(CubeBase):
-    """a Circle in 3D Space"""
-
-    def __init__(self, surface, origin):
-        CubeBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
+    @staticmethod
+    def get_scale_rot_matrix(scale, shift, aspect):
         """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
+        create a affinde transformation matrix
+    
+        scale is of type tuple (200, 200, 1)
+        shift is of type tuple (0, 0, -10)
+        degreees of type tuple for everx axis steps in degrees
+        aspect of type tuple to correct aspect ratios
+        steps is of type int
 
-        in this example there are 360 transformations
+        rotates around x/y/z in 1 degree steps and precalculates
+        360 different matrices
         """
         # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(400, 400, 1)
-        shift_matrix = Utils3d.get_shift_matrix(0, 0, -15)
+        assert len(scale) == 3
+        assert len(shift) == 3
+        assert len(aspect) == 2
+        scale_matrix = Utils3d.get_scale_matrix(*scale)
+        shift_matrix = Utils3d.get_shift_matrix(*shift)
+        aspect_ratio = aspect[0] / aspect[1]
         alt_basis = Matrix3d(
             Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -5),
+            Vector(0, aspect_ratio, 0, 0),
+            Vector(0, 0, 1, 0),
             Vector(0 ,0 ,0 ,1),
             )
         alt_basis_inv = alt_basis.inverse()
         # combine scale and change of basis to one transformation
         # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
-            # this part of tranformation is calculated on every step
-            transformation = Utils3d.get_rot_z_matrix(rad_angle).mul_matrix(
-                    Utils3d.get_rot_x_matrix(rad_angle).mul_matrix(
-                        Utils3d.get_rot_y_matrix(rad_angle)))
-            # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
+        static_transformation = shift_matrix.mul_matrix(alt_basis_inv.mul_matrix(scale_matrix))
+        return(static_transformation)
 
-
-class CubeRotX(CubeBase):
-
-    def __init__(self, surface, origin):
-        CubeBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
+    @staticmethod
+    def get_rot_matrix(static_transformation, degrees, steps):
         """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
-
-        in this example there are 360 transformations
+        static_transformation of type Matrix3d, will be applied to every step
+        degrees of type tuple, for every axis one entry in degrees
+        steps of type int, how many steps to precalculate
         """
-        # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(200, 200, 1)
-        alt_basis = Matrix3d(
-            Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
-            Vector(0 ,0 ,0 ,1),
-            )
-        alt_basis_inv = alt_basis.inverse()
-        # combine scale and change of basis to one transformation
-        # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
+        assert len(degrees) == 3
+        assert type(steps) == int
+        assert isinstance(static_transformation, Matrix3d)
+        transformations = []
+        for step in range(steps):
+            angle_x = step * degrees[0] * math.pi / 180
+            angle_y = step * degrees[1] * math.pi / 180
+            angle_z = step * degrees[2] * math.pi / 180
             # this part of tranformation is calculate on every step
-            transformation = Utils3d.get_rot_x_matrix(rad_angle)
+            transformation = Utils3d.get_rot_z_matrix(angle_z).mul_matrix(
+                    Utils3d.get_rot_x_matrix(angle_x).mul_matrix(
+                        Utils3d.get_rot_y_matrix(angle_y)))
             # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
-
-class CubeRotY(CubeBase):
-
-    def __init__(self, surface, origin):
-        CubeBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
-        """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
-
-        in this example there are 360 transformations
-        """
-        # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(200, 200, 1)
-        alt_basis = Matrix3d(
-            Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
-            Vector(0 ,0 ,0 ,1),
-            )
-        alt_basis_inv = alt_basis.inverse()
-        # combine scale and change of basis to one transformation
-        # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
-            # this part of tranformation is calculate on every step
-            transformation = Utils3d.get_rot_y_matrix(rad_angle)
-            # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
-
-class CubeRotZ(CubeBase):
-
-    def __init__(self, surface, origin):
-        CubeBase.__init__(self, surface, origin)
-
-    def initialize_transformations(self):
-        """
-        this method can be subclassed to apply different transformations
-        to original cube vertices
-
-        in this example there are 360 transformations
-        """
-        # scale and change basis, and shift
-        scale_matrix = Utils3d.get_scale_matrix(200, 200, 1)
-        alt_basis = Matrix3d(
-            Vector(1, 0, 0, 0),
-            Vector(0, 16/9, 0, 0),
-            Vector(0, 0, 1, -10),
-            Vector(0 ,0 ,0 ,1),
-            )
-        alt_basis_inv = alt_basis.inverse()
-        # combine scale and change of basis to one transformation
-        # static matrix
-        static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
-        for angle in range(360):
-            rectangle = []
-            rad_angle = angle * math.pi / 180
-            # this part of tranformation is calculate on every step
-            transformation = Utils3d.get_rot_z_matrix(rad_angle)
-            # combine with static part of transformation
-            self.transformations.append(static_transformation.mul_matrix(transformation))
+            transformations.append(static_transformation.mul_matrix(transformation))
+        return(transformations)
 
 
 def test():
@@ -358,11 +201,53 @@ def test():
         fps = 50
         surface = pygame.display.set_mode((600, 600))
         pygame.init()
-        objects = (
+        cube = Transformer.get_cube_polygons()
+        objects = []
+        for y in range(100, 500, 50):
+            for x in range(100, 500, 50):
+                objects.append(
+                    Mesh(
+                        surface,
+                        origin=(x, y), 
+                        transformations=
+                            Transformer.get_rot_matrix(
+                                Transformer.get_scale_rot_matrix(
+                                    scale=(200,200,1), 
+                                    shift=(0, 0, -20), 
+                                    aspect=(16, 9)),
+                                degrees=((x-y)/50, (y-x)/50, 3),
+                                steps=360),
+                        polygons = cube)
+                )
+        objects1 = (
             #CubeRotX(surface, origin=(150, 300)),
             #CubeRotY(surface, origin=(300, 300)),
             #CubeRotZ(surface, origin=(450, 300)),
-            CubeRotXYZ(surface, origin=(300, 150)),
+            Mesh(
+                surface,
+                origin=(150, 300), 
+                transformations=
+                    Transformer.get_rot_matrix(
+                        Transformer.get_scale_rot_matrix(
+                            scale=(200,200,1), 
+                            shift=(0, 0, -20), 
+                            aspect=(16, 9)),
+                        degrees=(1, 2, 3),
+                        steps=360),
+                polygons = cube),
+             Mesh(
+                surface,
+                origin=(300, 300), 
+                transformations=
+                    Transformer.get_rot_matrix(
+                        Transformer.get_scale_rot_matrix(
+                            scale=(220, 220, 1), 
+                            shift=(0, 0, -10), 
+                            aspect=(16, 9)),
+                        degrees=(3, 2, 1),
+                        steps=360),
+                polygons = cube),
+            
             #CubeRotXYZ(surface, origin=(300, 450)),
             #TriangleRotXYZ(surface, origin=(150, 450)),
             #PyramideRotXYZ(surface, origin=(350, 450)),

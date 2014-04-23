@@ -2,18 +2,23 @@
 # -*- coding: utf-8 -*-
 
 import math
+import numpy as np
+# own modules
 from Vector import Vector as Vector
 from Matrix3d import Matrix3d as Matrix3d
 from Polygon import Polygon as Polygon
 
-cpdef project(vec1, win_width, win_height, fov, viewer_distance):
+cpdef project(vec1, int win_width, int win_height, double fov, double viewer_distance):
+    cdef double factor
+    cdef double x
+    cdef double y
     factor = fov / (viewer_distance + vec1.z)
     x = vec1.x * factor + win_width / 2
     y = -vec1.y * factor + win_height / 2
     return(Vector(x, y, 1, vec1.h))
 
 cpdef get_identity_matrix():
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         (1, 0, 0, 0),
         (0, 1, 0, 0),
         (0, 0, 1, 0),
@@ -28,9 +33,11 @@ cpdef get_rot_x_matrix(double theta):
     |0   cos θ    -sin θ| |y| = |y cos θ - z sin θ| = |y'|
     |0   sin θ     cos θ| |z|   |y sin θ + z cos θ|   |z'|
     """
+    cdef double cos
+    cdef double sin
     cos = math.cos(theta)
     sin = math.sin(theta)
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         (1,    0,   0, 0),
         (0,  cos, sin, 0),
         (0, -sin, cos, 0),
@@ -45,9 +52,11 @@ cpdef get_rot_z_matrix(double theta):
     |sin θ    cos θ   0| |y| = |x sin θ + y cos θ| = |y'|
     |  0       0      1| |z|   |        z        |   |z'|
     """
+    cdef double cos
+    cdef double sin
     cos = math.cos(theta)
     sin = math.sin(theta)
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         (cos, -sin, 0, 0),
         (sin,  cos, 0, 0),
         (  0,    0, 1, 0),
@@ -62,12 +71,14 @@ cpdef get_rot_y_matrix(double theta):
     |     0    1       0| |y| = |         y        | = |y'|
     |-sin θ    0   cos θ| |z|   |-x sin θ + z cos θ|   |z'|
     """
+    cdef double cos
+    cdef double sin
     cos = math.cos(theta)
     # substitute sin with cos, but its not clear if this is faster
     # sin² + cos² = 1
     # sin = sqrt(1.0 - cos)
     sin = math.sin(theta)
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         ( cos, 0, sin, 0),
         (   0, 1,   0, 0),
         (-sin, 0, cos, 0),
@@ -89,12 +100,14 @@ cpdef get_rot_align(vector1, vector2):
     http://www.iquilezles.org/www/articles/noacos/noacos.htm
     """
     # make sure, that bot vectors are unit vectors
-    assert vector1.length_sqrd() == 1
-    assert vector2.length_sqrd() == 1
+    #assert vector1.length_sqrd() == 1
+    #assert vector2.length_sqrd() == 1
+    cdef double dot
+    cdef double k
     cross = vector2.cross(vector1)
     dot = vector2.dot(vector1)
     k = 1.0 / (1.0 + dot)
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         (cross.x * cross.x * k + dot    , cross.y * cross.x * k - cross.z, cross.z * cross.x * k + cross.y, 0),
         (cross.x * cross.y * k + cross.z, cross.y * cross.y * k + dot    , cross.z * cross.y * k - cross.x, 0),
         (cross.x * cross.z * k - cross.y, cross.y * cross.z * k + cross.x, cross.z * cross.z * k + dot,     0),
@@ -109,7 +122,7 @@ cpdef get_shift_matrix(double x, double y, double z):
     | 0  0  0  z|
     | 0  0  0  1|
     """
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         ( 1, 0, 0, 0),
         ( 0, 1, 0, 0),
         ( 0, 0, 1, 0),
@@ -124,7 +137,7 @@ cpdef get_scale_matrix(double x, double y, double z):
     | 0  0  z  0|
     | 0  0  0  1|
     """
-    return(Matrix3d(
+    return(Matrix3d.from_row_vectors(
         ( x, 0, 0, 0),
         ( 0, y, 0, 0),
         ( 0, 0, z, 0),
@@ -224,13 +237,14 @@ cpdef get_scale_rot_matrix(scale, shift, aspect):
     360 different matrices
     """
     # scale and change basis, and shift
-    assert len(scale) == 3
-    assert len(shift) == 3
-    assert len(aspect) == 2
+    # assert len(scale) == 3
+    # assert len(shift) == 3
+    # assert len(aspect) == 2
+    cdef double aspect_ratio
     scale_matrix = get_scale_matrix(*scale)
     shift_matrix = get_shift_matrix(*shift)
     aspect_ratio = aspect[0] / aspect[1]
-    alt_basis = Matrix3d(
+    alt_basis = Matrix3d.from_row_vectors(
         Vector(1, 0, 0, 0),
         Vector(0, aspect_ratio, 0, 0),
         Vector(0, 0, 1, 0),
@@ -242,20 +256,28 @@ cpdef get_scale_rot_matrix(scale, shift, aspect):
     static_transformation = shift_matrix.mul_matrix(alt_basis_inv.mul_matrix(scale_matrix))
     return(static_transformation)
 
-cpdef get_rot_matrix(static_transformation, degrees, steps):
+cpdef get_rot_matrix(static_transformation, tuple degrees, int steps):
     """
     static_transformation of type Matrix3d, will be applied to every step
     degrees of type tuple, for every axis one entry in degrees
     steps of type int, how many steps to precalculate
     """
-    assert len(degrees) == 3
-    assert type(steps) == int
-    assert isinstance(static_transformation, Matrix3d)
+    #assert len(degrees) == 3
+    #assert type(steps) == int
+    #assert isinstance(static_transformation, Matrix3d)
+    cdef double angle_x
+    cdef double angle_y
+    cdef double angle_z
+    cdef int step
+    cdef list transformations
+    cdef double deg2rad = math.pi / 180
+    cdef double factor
     transformations = []
     for step in range(steps):
-        angle_x = step * degrees[0] * math.pi / 180
-        angle_y = step * degrees[1] * math.pi / 180
-        angle_z = step * degrees[2] * math.pi / 180
+        factor = step * deg2rad
+        angle_x = degrees[0] * factor
+        angle_y = degrees[1] * factor
+        angle_z = degrees[2] * factor
         # this part of tranformation is calculate on every step
         transformation = get_rot_z_matrix(angle_z).mul_matrix(
                 get_rot_x_matrix(angle_x).mul_matrix(

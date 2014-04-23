@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import unittest
 import math
 from Vector import Vector as Vector
 
@@ -9,10 +8,12 @@ cdef class Polygon(object):
     """this polygon consists of n-vertices"""
 
     cdef list vertices
+    cdef int len_vertices
 
     def __init__(self, vertices):
         # vertices should be list of Vector Objects
         self.vertices = vertices
+        self.len_vertices = len(vertices)
 
     cpdef double get_avg_z(self):
         cdef double avg_z = 0.0
@@ -20,10 +21,11 @@ cdef class Polygon(object):
             avg_z += vector.z
         return(avg_z / len(self.vertices))
 
-    cpdef itransform(self, object matrix):
+    cpdef itransform(self, matrix):
         """apply transformation to all vertices"""
-        cdef object old_vertice = self.vertices[0]
-        for counter in range(len(self.vertices)):
+        cdef int counter
+        old_vertice = self.vertices[0]
+        for counter in range(self.len_vertices):
             self.vertices[counter] = matrix.mul_vec(self.vertices[counter])
 
     cpdef transform(self, object matrix):
@@ -35,6 +37,7 @@ cdef class Polygon(object):
 
     cpdef list projected(self, shift):
         """return point list in 2d for polygon method of pygame.draw"""
+        cdef list vertices_2d
         vertices_2d = []
         for vertice in self.vertices:
             vertices_2d.append(vertice.project2d(shift))
@@ -51,8 +54,6 @@ cdef class Polygon(object):
         get v2 = (C-A)
         normal = cross(v1 and v2)
         """
-        # make sure this is only used on triangles
-        assert len(self.vertices) == 3
         # get at least two vectors on plan
         v1 = self.vertices[0] - self.vertices[1]
         v2 = self.vertices[0] - self.vertices[2]
@@ -68,8 +69,9 @@ cdef class Polygon(object):
         http://www.iquilezles.org/www/articles/areas/areas.htm
         it workes generally for n-vertices polygons
         """
+        cdef int index
         normal = Vector(0, 0, 0, 1)
-        for index in range(len(self.vertices) - 1):
+        for index in range(self.len_vertices - 1):
             normal += self.vertices[index].cross(self.vertices[index+1])
         return(normal)
 
@@ -77,6 +79,7 @@ cdef class Polygon(object):
         """
         are is defined as the half of the lenght of the polygon normal
         """
+        cdef double area
         normal = self.get_normal()
         area = normal.length() / 2.0
         return(area)

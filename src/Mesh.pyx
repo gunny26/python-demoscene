@@ -10,6 +10,7 @@ cdef class Mesh(object):
     cdef object surface
     cdef tuple origin
     cdef int frames
+    cdef int len_transformations
     cdef list transformations
     cdef list polygons
 
@@ -27,6 +28,7 @@ cdef class Mesh(object):
             self.initialize_transformations()
         else:
             self.transformations = transformations
+        self.len_transformations = len(transformations)
         # initialize list of polygons for this mesh
         if polygons is None:
             self.polygons = []
@@ -57,13 +59,15 @@ cdef class Mesh(object):
 
         finally painting on surface is called
         """
+        cdef int normal_color
         # light from above
         light_position = Vector(0, 0, 10, 1)
         # apply linear transformations to vetices
         # daw faces fom lowe z to higher
+        transformation = self.transformations[self.frames % self.len_transformations]
         for polygon in self.polygons:
             # apply transformation
-            newpolygon = polygon.transform(self.transformations[self.frames % len(self.transformations)])
+            newpolygon = polygon.transform(transformation)
             # get new position vector
             pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource
@@ -77,4 +81,4 @@ cdef class Mesh(object):
             #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
             color = pygame.Color(normal_color, normal_color, normal_color, 255)
             pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin), 0)
-        self.frames += 1 
+        self.frames += 1

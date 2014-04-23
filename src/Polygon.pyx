@@ -70,7 +70,7 @@ cdef class Polygon(object):
         it workes generally for n-vertices polygons
         """
         cdef int index
-        normal = Vector(0, 0, 0, 1)
+        normal = Vector.from_tuple(0, 0, 0)
         for index in range(self.len_vertices - 1):
             normal += self.vertices[index].cross(self.vertices[index+1])
         return(normal)
@@ -90,11 +90,11 @@ cdef class Polygon(object):
         average of all axis
         it should point to the middle of the polygon
         """
-        pos_vec = Vector(0.0, 0.0, 0.0, 1.0)
+        pos_vec = Vector.from_tuple(0.0, 0.0, 0.0, 1.0)
         for vector in self.vertices:
-            pos_vec.x += vector.x
-            pos_vec.y += vector.y
-            pos_vec.z += vector.z
+            pos_vec[0] += vector[0]
+            pos_vec[1] += vector[1]
+            pos_vec[2] += vector[2]
         return(pos_vec / len(self.vertices))
 
     def __richcmp__(obj1, obj2, method):

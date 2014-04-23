@@ -3,6 +3,7 @@
 import math
 import pygame
 from Vector import Vector as Vector
+from Util3d import Util3d as Util3d
 
 cdef class Mesh(object):
     """abstract class to represent mesh of polygons"""
@@ -61,13 +62,15 @@ cdef class Mesh(object):
         """
         cdef int normal_color
         # light from above
-        light_position = Vector(0, 0, 10, 1)
+        light_position = Vector.from_tuple(0, 0, 10, 1)
+        shift_matrix = Util3d.get_shift_matrix(10, 10, -10)
         # apply linear transformations to vetices
         # daw faces fom lowe z to higher
         transformation = self.transformations[self.frames % self.len_transformations]
         for polygon in self.polygons:
             # apply transformation
-            newpolygon = polygon.transform(transformation)
+            newpolygon = polygon.transform(transformation) + shift_matrix
+            print newpolygon
             # get new position vector
             pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource
@@ -80,5 +83,6 @@ cdef class Mesh(object):
             normal_color = int(light_angle * 255/math.pi)
             #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
             color = pygame.Color(normal_color, normal_color, normal_color, 255)
+            print newpolygon.projected(self.origin)
             pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin), 0)
         self.frames += 1

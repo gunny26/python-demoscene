@@ -12,17 +12,13 @@ cpdef project(vec1, int win_width, int win_height, double fov, double viewer_dis
     cdef double factor
     cdef double x
     cdef double y
-    factor = fov / (viewer_distance + vec1.z)
-    x = vec1.x * factor + win_width / 2
-    y = -vec1.y * factor + win_height / 2
-    return(Vector(x, y, 1, vec1.h))
+    factor = fov / (viewer_distance + vec1[2])
+    x = vec1[0] * factor + win_width / 2
+    y = -vec1[1] * factor + win_height / 2
+    return(Vector.from_tuple(x, y, 1))
 
 cpdef get_identity_matrix():
-    return(Matrix3d.from_row_vectors(
-        (1, 0, 0, 0),
-        (0, 1, 0, 0),
-        (0, 0, 1, 0),
-        (0, 0, 0, 1)))
+    return(Matrix3d(np.eye(3, dtype=np.float32)))
 
 cpdef get_rot_x_matrix(double theta):
     """return rotation matrix around x axis
@@ -38,10 +34,9 @@ cpdef get_rot_x_matrix(double theta):
     cos = math.cos(theta)
     sin = math.sin(theta)
     return(Matrix3d.from_row_vectors(
-        (1,    0,   0, 0),
-        (0,  cos, sin, 0),
-        (0, -sin, cos, 0),
-        (0,    0,   0, 1)))
+        Vector.from_tuple(1,    0,   0),
+        Vector.from_tuple(0,  cos, sin),
+        Vector.from_tuple(0, -sin, cos)))
 
 cpdef get_rot_z_matrix(double theta):
     """
@@ -57,10 +52,9 @@ cpdef get_rot_z_matrix(double theta):
     cos = math.cos(theta)
     sin = math.sin(theta)
     return(Matrix3d.from_row_vectors(
-        (cos, -sin, 0, 0),
-        (sin,  cos, 0, 0),
-        (  0,    0, 1, 0),
-        (  0,    0, 0, 1)))
+        Vector.from_tuple(cos, -sin, 0),
+        Vector.from_tuple(sin,  cos, 0),
+        Vector.from_tuple(  0,    0, 1)))
 
 cpdef get_rot_y_matrix(double theta):
     """
@@ -79,10 +73,9 @@ cpdef get_rot_y_matrix(double theta):
     # sin = sqrt(1.0 - cos)
     sin = math.sin(theta)
     return(Matrix3d.from_row_vectors(
-        ( cos, 0, sin, 0),
-        (   0, 1,   0, 0),
-        (-sin, 0, cos, 0),
-        (   0, 0,   0, 1)
+        Vector.from_tuple( cos, 0, sin),
+        Vector.from_tuple(   0, 1,   0),
+        Vector.from_tuple(-sin, 0, cos)
         ))
 
 cpdef get_rot_align(vector1, vector2):
@@ -108,10 +101,9 @@ cpdef get_rot_align(vector1, vector2):
     dot = vector2.dot(vector1)
     k = 1.0 / (1.0 + dot)
     return(Matrix3d.from_row_vectors(
-        (cross.x * cross.x * k + dot    , cross.y * cross.x * k - cross.z, cross.z * cross.x * k + cross.y, 0),
-        (cross.x * cross.y * k + cross.z, cross.y * cross.y * k + dot    , cross.z * cross.y * k - cross.x, 0),
-        (cross.x * cross.z * k - cross.y, cross.y * cross.z * k + cross.x, cross.z * cross.z * k + dot,     0),
-        (                              0,                               0,                           0,     1),
+        Vector.from_tuple(cross[0] * cross[0] * k + dot    , cross[1] * cross[0] * k - cross[2], cross[2] * cross[0] * k + cross[1]),
+        Vector.from_tuple(cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot    , cross[2] * cross[1] * k - cross[0]),
+        Vector.from_tuple(cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot),
         ))
 
 cpdef get_shift_matrix(double x, double y, double z):
@@ -123,11 +115,20 @@ cpdef get_shift_matrix(double x, double y, double z):
     | 0  0  0  1|
     """
     return(Matrix3d.from_row_vectors(
-        ( 1, 0, 0, 0),
-        ( 0, 1, 0, 0),
-        ( 0, 0, 1, 0),
-        ( x, y, z, 1)
+        Vector.from_tuple( x, 0, 0),
+        Vector.from_tuple( 0, y, 0),
+        Vector.from_tuple( 0, 0, z),
         ))
+
+cpdef get_shift_vector(double x, double y, double z):
+    """
+    return transformation matrix to shift vector
+    | 0  0  0  x|
+    | 0  0  0  y|
+    | 0  0  0  z|
+    | 0  0  0  1|
+    """
+    return(Vector.from_tuple( x, y, z))
 
 cpdef get_scale_matrix(double x, double y, double z):
     """
@@ -138,30 +139,29 @@ cpdef get_scale_matrix(double x, double y, double z):
     | 0  0  0  1|
     """
     return(Matrix3d.from_row_vectors(
-        ( x, 0, 0, 0),
-        ( 0, y, 0, 0),
-        ( 0, 0, z, 0),
-        ( 0, 0, 0, 1)
+        Vector.from_tuple( x, 0, 0),
+        Vector.from_tuple( 0, y, 0),
+        Vector.from_tuple( 0, 0, z),
         ))
 
 cpdef get_rectangle_points():
     """basic rectangle vertices"""
     points = [
-        Vector(-1,  1, 0, 1),
-        Vector( 1,  1, 0, 1),
-        Vector( 1, -1, 0, 1),
-        Vector(-1, -1, 0, 1),
-        Vector(-1,  1, 0, 1),
+        Vector.from_tuple(-1,  1, 0),
+        Vector.from_tuple( 1,  1, 0),
+        Vector.from_tuple( 1, -1, 0),
+        Vector.from_tuple(-1, -1, 0),
+        Vector.from_tuple(-1,  1, 0),
         ]
     return(points)
 
 cpdef get_triangle_points():
     """basic triangle vertices"""
     points = [
-        Vector(-1,  0, 0, 1),
-        Vector( 0,  1, 0, 1),
-        Vector( 1,  0, 0, 1),
-        Vector(-1,  0, 0, 1),
+        Vector.from_tuple(-1,  0, 0),
+        Vector.from_tuple( 0,  1, 0),
+        Vector.from_tuple( 1,  0, 0),
+        Vector.from_tuple(-1,  0, 0),
         ]
     return(points)
 
@@ -245,15 +245,14 @@ cpdef get_scale_rot_matrix(scale, shift, aspect):
     shift_matrix = get_shift_matrix(*shift)
     aspect_ratio = aspect[0] / aspect[1]
     alt_basis = Matrix3d.from_row_vectors(
-        Vector(1, 0, 0, 0),
-        Vector(0, aspect_ratio, 0, 0),
-        Vector(0, 0, 1, 0),
-        Vector(0 ,0 ,0 ,1),
+        Vector.from_tuple(1, 0, 0),
+        Vector.from_tuple(0, aspect_ratio, 0),
+        Vector.from_tuple(0, 0, 1),
         )
     alt_basis_inv = alt_basis.inverse()
     # combine scale and change of basis to one transformation
     # static matrix
-    static_transformation = shift_matrix.mul_matrix(alt_basis_inv.mul_matrix(scale_matrix))
+    static_transformation = shift_matrix + alt_basis_inv.mul_matrix(scale_matrix)
     return(static_transformation)
 
 cpdef get_rot_matrix(static_transformation, tuple degrees, int steps):

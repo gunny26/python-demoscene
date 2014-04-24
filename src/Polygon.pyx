@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+import numpy as np
 from Vector import Vector as Vector
 
 cdef class Polygon(object):
@@ -16,15 +17,28 @@ cdef class Polygon(object):
         self.len_vertices = len(vertices)
 
     cpdef double get_avg_z(self):
+        """return average z of vertices"""
         cdef double avg_z = 0.0
         for vector in self.vertices:
             avg_z += vector.z
         return(avg_z / len(self.vertices))
 
+    cpdef shift(self, shift_vector):
+        """return shifted vertices"""
+        new_vertices = []
+        for vector in self.vertices:
+            new_vertices.append(vector + shift_vector)
+        return(Polygon(new_vertices))
+
+    cpdef ishift(self, shift_vector):
+        """shift vertices inplace"""
+        cdef int counter
+        for counter in range(self.len_vertices):
+            self.vertices[counter] += shift_vector
+
     cpdef itransform(self, matrix):
         """apply transformation to all vertices"""
         cdef int counter
-        old_vertice = self.vertices[0]
         for counter in range(self.len_vertices):
             self.vertices[counter] = matrix.mul_vec(self.vertices[counter])
 
@@ -90,12 +104,14 @@ cdef class Polygon(object):
         average of all axis
         it should point to the middle of the polygon
         """
-        pos_vec = Vector.from_tuple(0.0, 0.0, 0.0, 1.0)
+        cdef double avg_x = 0.0
+        cdef double avg_y = 0.0
+        cdef double avg_z = 0.0
         for vector in self.vertices:
-            pos_vec[0] += vector[0]
-            pos_vec[1] += vector[1]
-            pos_vec[2] += vector[2]
-        return(pos_vec / len(self.vertices))
+            avg_x += vector[0]
+            avg_y += vector[1]
+            avg_z += vector[2]
+        return(Vector.from_tuple(avg_x, avg_y, avg_z))
 
     def __richcmp__(obj1, obj2, method):
         if method == 0: # < __lt__

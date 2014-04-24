@@ -5,13 +5,13 @@ import math
 import numpy as np
 cimport numpy as np
 DTYPE = np.float32
-ctypedef np.float32_t DTYPE_d
+ctypedef np.float32_t DTYPE_t
 
 cdef class Vector(object):
 
     cdef public np.ndarray data
 
-    def __init__(self, np.ndarray data):
+    def __init__(self, data):
         self.data = data
 
     @classmethod
@@ -36,27 +36,27 @@ cdef class Vector(object):
         """string output"""
         return("%s" % (self.data))
 
-    def __add__(self, object other):
+    def __add__(self, other):
         """vector addition with another Vector class"""
         result = self.data + other.data
         return(Vector(result))
 
-    def __iadd__(self, object other):
-        """vector addition with another Vector class implace"""
-        self.data = self.data + other.data
+    def __iadd__(self, other):
+        """vector addition with another Vector class inplace"""
+        self.data = self.data + other
         return(self)
 
-    def __sub__(self, object other):
+    def __sub__(self, other):
         """vector addition with another Vector class"""
         result = self.data - other.data
         return(Vector(result))
 
-    def __isub__(self, object other):
+    def __isub__(self, other):
         """vector addition with another Vector class implace"""
         self.data = self.data - other.data
         return(self)
 
-    def __richcmp__(self, object other, int method):
+    def __richcmp__(self, other, int method):
         if method == 0: # < __lt__
             pass
         elif method == 2: # == __eq__

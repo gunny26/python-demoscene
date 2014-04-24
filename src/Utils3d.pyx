@@ -106,20 +106,6 @@ cpdef get_rot_align(vector1, vector2):
         Vector.from_tuple(cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot),
         ))
 
-cpdef get_shift_matrix(double x, double y, double z):
-    """
-    return transformation matrix to shift vector
-    | 0  0  0  x|
-    | 0  0  0  y|
-    | 0  0  0  z|
-    | 0  0  0  1|
-    """
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple( x, 0, 0),
-        Vector.from_tuple( 0, y, 0),
-        Vector.from_tuple( 0, 0, z),
-        ))
-
 cpdef get_shift_vector(double x, double y, double z):
     """
     return transformation matrix to shift vector
@@ -128,7 +114,7 @@ cpdef get_shift_vector(double x, double y, double z):
     | 0  0  0  z|
     | 0  0  0  1|
     """
-    return(Vector.from_tuple( x, y, z))
+    return(Vector.from_tuple(x, y, z))
 
 cpdef get_scale_matrix(double x, double y, double z):
     """
@@ -170,24 +156,24 @@ cpdef get_pyramid_polygons():
     # front
     face = Polygon(get_triangle_points())
     face.itransform(get_rot_x_matrix(-math.pi/4))
-    face.itransform(get_shift_matrix(0, 0, 1))
+    face.ishift(Vector.from_tuple(0, 0, 1))
     polygons.append(face)
     # back
     face = Polygon(get_triangle_points())
     face.itransform(get_rot_x_matrix(math.pi/4))
-    face.itransform(get_shift_matrix(0, 0, -1))
+    face.ishift(Vector.from_tuple(0, 0, -1))
     polygons.append(face)
     # left
     face = Polygon(get_triangle_points())
     face.itransform(get_rot_x_matrix(-math.pi/4))
     face.itransform(get_rot_y_matrix(-math.pi/2))
-    face.itransform(get_shift_matrix(1, 0, 0))
+    face.ishift(Vector.from_tuple(1, 0, 0))
     polygons.append(face)
     # right
     face = Polygon(get_triangle_points())
     face.itransform(get_rot_x_matrix(-math.pi/4))
     face.itransform(get_rot_y_matrix(math.pi/2))
-    face.itransform(get_shift_matrix(-1, 0, 0))
+    face.ishift(Vector.from_tuple(-1, 0, 0))
     polygons.append(face)
 
 cpdef get_cube_polygons():
@@ -196,34 +182,34 @@ cpdef get_cube_polygons():
     cdef list polygons = []
     face = Polygon(get_rectangle_points())
     face.itransform(get_rot_y_matrix(math.pi/2))
-    face.itransform(get_shift_matrix(-1, 0, 0))
+    face.ishift(Vector.from_tuple(-1, 0, 0))
     polygons.append(face)
     # right
     face = Polygon(get_rectangle_points())
     face.itransform(get_rot_y_matrix(math.pi/2))
-    face.itransform(get_shift_matrix(1, 0, 0))
+    face.ishift(Vector.from_tuple(1, 0, 0))
     polygons.append(face)
     # bottom
     face = Polygon(get_rectangle_points())
     face.itransform(get_rot_x_matrix(math.pi/2))
-    face.itransform(get_shift_matrix(0, -1, 0))
+    face.ishift(Vector.from_tuple(0, -1, 0))
     polygons.append(face)
     # top
     face = Polygon(get_rectangle_points())
     face.itransform(get_rot_x_matrix(math.pi/2))
-    face.itransform(get_shift_matrix(0, 1, 0))
+    face.ishift(Vector.from_tuple(0, 1, 0))
     polygons.append(face)
     # front
     face = Polygon(get_rectangle_points())
-    face.itransform(get_shift_matrix(0, 0, -1))
+    face.ishift(Vector.from_tuple(0, 0, -1))
     polygons.append(face)
     # back
     face = Polygon(get_rectangle_points())
-    face.itransform(get_shift_matrix(0, 0, 1))
+    face.ishift(Vector.from_tuple(0, 0, 1))
     polygons.append(face)
     return(polygons)
 
-cpdef get_scale_rot_matrix(scale, shift, aspect):
+cpdef get_scale_rot_matrix(scale, aspect):
     """
     create a affinde transformation matrix
 
@@ -242,7 +228,6 @@ cpdef get_scale_rot_matrix(scale, shift, aspect):
     # assert len(aspect) == 2
     cdef double aspect_ratio
     scale_matrix = get_scale_matrix(*scale)
-    shift_matrix = get_shift_matrix(*shift)
     aspect_ratio = aspect[0] / aspect[1]
     alt_basis = Matrix3d.from_row_vectors(
         Vector.from_tuple(1, 0, 0),
@@ -252,7 +237,7 @@ cpdef get_scale_rot_matrix(scale, shift, aspect):
     alt_basis_inv = alt_basis.inverse()
     # combine scale and change of basis to one transformation
     # static matrix
-    static_transformation = shift_matrix + alt_basis_inv.mul_matrix(scale_matrix)
+    static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
     return(static_transformation)
 
 cpdef get_rot_matrix(static_transformation, tuple degrees, int steps):

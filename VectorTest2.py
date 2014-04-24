@@ -31,10 +31,10 @@ def test():
                             Utils3d.get_rot_matrix(
                                 Utils3d.get_scale_rot_matrix(
                                     scale=(200,200,1), 
-                                    shift=(0, 0, -20), 
                                     aspect=(16, 9)),
                                 degrees=((x-y+20)/50, (y-x+40)/50, 3),
                                 steps=360),
+                        shift = Vector.from_tuple(0, 0, -20),
                         polygons = cube)
                 )
         clock = pygame.time.Clock()       

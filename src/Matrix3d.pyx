@@ -43,29 +43,25 @@ cdef class Matrix3d(object):
         return("Matrix3d(%s)" % self.data)
 
     cpdef _set_col_vector(self, int colnum, object vector):
-        self.data[0][colnum] = vector[0]
-        self.data[1][colnum] = vector[1]
-        self.data[2][colnum] = vector[2]
+        self.data[:,colnum] = vector.data
+        #self.data[0][colnum] = vector[0]
+        #self.data[1][colnum] = vector[1]
+        #self.data[2][colnum] = vector[2]
 
     cpdef _get_col_vector(self, int colnum):
         """return column vector as Vector object"""
-        return(Vector.from_tuple(
-            self.data[0][colnum],
-            self.data[1][colnum],
-            self.data[2][colnum]))
+        return(Vector(self.data[:,colnum]))
 
     cpdef _set_row_vector(self, int rownum, object vector):
         """set row with data from vector"""
-        self.data[rownum][0] = vector[0]
-        self.data[rownum][1] = vector[1]
-        self.data[rownum][2] = vector[2]
+        self.data[rownum] = vector.data
+        #self.data[rownum][0] = vector[0]
+        #self.data[rownum][1] = vector[1]
+        #self.data[rownum][2] = vector[2]
 
     cpdef _get_row_vector(self, int rownum):
         """rownum starts at row = 0"""
-        return(Vector.from_tuple(
-            self.data[rownum][0], 
-            self.data[rownum][1],
-            self.data[rownum][2]))
+        return(Vector(self.data[rownum]))
 
     def __mul__(self, double scalar):
         return(Matrix3d(self.data * scalar))
@@ -98,10 +94,7 @@ cdef class Matrix3d(object):
 
         multiply 3x3 with 3x1 = 3x1
         """
-        return(Vector.from_tuple(
-            self._get_row_vector(0).dot(vector),
-            self._get_row_vector(1).dot(vector),
-            self._get_row_vector(2).dot(vector)))
+        return(Vector(np.dot(self.data, vector)))
 
     cpdef mul_matrix(self, object other):
         """

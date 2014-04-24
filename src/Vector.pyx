@@ -1,6 +1,6 @@
 #!/usr/bin/python
+# cython: profile=True
 # -*- coding: utf-8 -*-
-
 import math
 import numpy as np
 cimport numpy as np
@@ -11,7 +11,7 @@ cdef class Vector(object):
 
     cdef public np.ndarray data
 
-    def __init__(self, data):
+    def __init__(self, np.ndarray data):
         self.data = data
 
     @classmethod
@@ -43,7 +43,7 @@ cdef class Vector(object):
 
     def __iadd__(self, other):
         """vector addition with another Vector class inplace"""
-        self.data = self.data + other
+        self.data = self.data + other.data
         return(self)
 
     def __sub__(self, other):
@@ -60,19 +60,13 @@ cdef class Vector(object):
         if method == 0: # < __lt__
             pass
         elif method == 2: # == __eq__
-            return(
-                self.data[0] == other.data[0] and 
-                self.data[1] == other.data[1] and
-                self.data[2] == other.data[2])
+            return(self.data == other.data)
         elif method == 4: # > __gt__
             pass
         elif method == 1: # <= lower_equal
             pass
         elif method == 3: # != __ne__
-            return(
-                self.data[0] != other.data[0] or
-                self.data[1] != other.data[1] or
-                self.data[2] != other.data[2])
+            return(self.data != other.data)
         elif method == 5: # >= greater equal
             pass
             
@@ -94,13 +88,13 @@ cdef class Vector(object):
         self.data /= scalar
         return(self)
 
-    cpdef length(self):
+    cpdef double length(self):
         """length"""
-        return(math.sqrt(self.data[0] ** 2 + self.data[1] ** 2 + self.data[2] ** 2))
+        return(math.sqrt((self.data ** 2).sum()))
 
-    cpdef length_sqrd(self):
+    cpdef double length_sqrd(self):
         """length squared"""
-        return(self.data[0] ** 2 + self.data[1] ** 2 + self.data[2] ** 2)
+        return((self.data ** 2).sum())
 
     cpdef double dot(self, other):
         """
@@ -121,9 +115,9 @@ cdef class Vector(object):
         so theta could be calculates as 
         theta = acos(dot product)
         """
-        return(np.dot(self.data, other.data))
+        return(self.data.dot(other.data))
 
-    cpdef cross(self, other):
+    cpdef Vector cross(self, other):
         """
         cross product of self an other vector
         the result is a new perpendicular vector to self and other
@@ -145,7 +139,7 @@ cdef class Vector(object):
         """
         return(Vector(np.cross(self.data, other.data)))
 
-    cpdef normalized(self):
+    cpdef Vector normalized(self):
         """
         return self with length=1, unit vector
         """
@@ -157,7 +151,8 @@ cdef class Vector(object):
         project self to 2d
         simply divide x and y with z value
         """
-        return((self.data[0] / self.data[2] + shift_vec[0], self.data[1] / self.data[2] + shift_vec[1]))
+        shifted = self.data / self.data[2]
+        return((shifted[0] + shift_vec[0], shifted[1] + shift_vec[1]))
 
     cpdef double angle_to(self, other):
         """

@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# cython: profile=True
 # -*- coding: utf-8 -*-
 
 import math
@@ -16,7 +17,6 @@ cdef class Matrix3d(object):
 
     def __init__(self, np.ndarray data):
         """init from 3 row vectors"""
-        assert len(data) == 3
         self.data = data
 
     @classmethod
@@ -30,11 +30,8 @@ cdef class Matrix3d(object):
 
     @classmethod
     def from_row_vectors(cls, row1, row2, row3):
-        data = np.zeros([9], dtype=DTYPE).reshape([3, 3])
-        data[0] = row1.data
-        data[1] = row2.data
-        data[2] = row3.data
-        return(cls(data))
+        data = np.array([row1.data, row2.data, row3.data], dtype=DTYPE)
+        return(cls(data.reshape(3, 3)))
 
     def __repr__(self):
         return("Matrix3d(%s)" % self.data)
@@ -44,9 +41,6 @@ cdef class Matrix3d(object):
 
     cpdef _set_col_vector(self, int colnum, object vector):
         self.data[:,colnum] = vector.data
-        #self.data[0][colnum] = vector[0]
-        #self.data[1][colnum] = vector[1]
-        #self.data[2][colnum] = vector[2]
 
     cpdef _get_col_vector(self, int colnum):
         """return column vector as Vector object"""
@@ -55,9 +49,6 @@ cdef class Matrix3d(object):
     cpdef _set_row_vector(self, int rownum, object vector):
         """set row with data from vector"""
         self.data[rownum] = vector.data
-        #self.data[rownum][0] = vector[0]
-        #self.data[rownum][1] = vector[1]
-        #self.data[rownum][2] = vector[2]
 
     cpdef _get_row_vector(self, int rownum):
         """rownum starts at row = 0"""
@@ -87,7 +78,7 @@ cdef class Matrix3d(object):
         self.data += other.data
         return(self)
 
-    cpdef mul_vec(self, object vector):
+    cpdef mul_vec(self, vector):
         """
         multiply self with vector
         return type is vector
@@ -96,7 +87,7 @@ cdef class Matrix3d(object):
         """
         return(Vector(np.dot(self.data, vector)))
 
-    cpdef mul_matrix(self, object other):
+    cpdef Matrix3d mul_matrix(self, Matrix3d other):
         """
         multiply self by matrix of same dimension (4x4)
         only defined for matrices with specific row an column number
@@ -108,8 +99,8 @@ cdef class Matrix3d(object):
         | a31 a32 a33 a34 |   | b31 b32 b33 b34 |     | r3 |
         | a41 a42 a43 a44 |   | b41 b42 b43 b44 |     | r4 |
         """
-        result = np.dot(self.data, other.data)
-        return(Matrix3d(result))
+        #result = np.dot(self.data, other.data)
+        return(Matrix3d(self.data.dot(other.data)))
 
     cpdef double determinant(self):
         """
@@ -120,11 +111,9 @@ cdef class Matrix3d(object):
         | 12 13 14 15 |
 
         """
-        cdef double det
-        det = np.linalg.det(self.data)
-        return(det)
+        return(np.linalg.det(self.data))
 
-    cpdef inverse(self):
+    cpdef Matrix3d inverse(self):
         """
         return determinant of self
         | 0   1  2  3 |

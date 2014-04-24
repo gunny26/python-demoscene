@@ -3,6 +3,7 @@
 
 import math
 import numpy as np
+cimport numpy as np
 # own modules
 from Vector import Vector as Vector
 from Matrix3d import Matrix3d as Matrix3d

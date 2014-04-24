@@ -269,8 +269,8 @@ def test():
         print 'shutting down'
 
 if __name__ == "__main__":
-    test()
-    sys.exit(0)
+    #test()
+    #sys.exit(0)
     import cProfile
     import pstats
     profile = "profiles/%s.profile" % sys.argv[0].split(".")[0]

@@ -1,8 +1,10 @@
 #!/usr/bin/python
+# cython: profile=True
 # -*- coding: utf-8 -*-
 
 import math
 import numpy as np
+cimport numpy as np
 from Vector import Vector as Vector
 
 cdef class Polygon(object):
@@ -11,8 +13,8 @@ cdef class Polygon(object):
     cdef list vertices
     cdef int len_vertices
 
-    def __init__(self, vertices):
-        # vertices should be list of Vector Objects
+    def __init__(self, list vertices):
+        # vertices should be list of ndarrays
         self.vertices = vertices
         self.len_vertices = len(vertices)
 
@@ -20,29 +22,29 @@ cdef class Polygon(object):
         """return average z of vertices"""
         cdef double avg_z = 0.0
         for vector in self.vertices:
-            avg_z += vector.z
-        return(avg_z / len(self.vertices))
+            avg_z += vector[1]
+        return(avg_z / self.len_vertices)
 
-    cpdef shift(self, shift_vector):
+    cpdef Polygon shift(self, np.ndarray shift_vector):
         """return shifted vertices"""
         new_vertices = []
         for vector in self.vertices:
             new_vertices.append(vector + shift_vector)
         return(Polygon(new_vertices))
 
-    cpdef ishift(self, shift_vector):
+    cpdef ishift(self, np.ndarray shift_vector):
         """shift vertices inplace"""
         cdef int counter
         for counter in range(self.len_vertices):
             self.vertices[counter] += shift_vector
 
-    cpdef itransform(self, matrix):
+    cpdef itransform(self, np.ndarray matrix):
         """apply transformation to all vertices"""
         cdef int counter
         for counter in range(self.len_vertices):
-            self.vertices[counter] = matrix.mul_vec(self.vertices[counter])
+            self.vertices[counter] = matrix * self.vertices[counter]
 
-    cpdef transform(self, object matrix):
+    cpdef Polygon transform(self, object matrix):
         """apply transformation to all vertices"""
         new_vertices = []
         for vector in self.vertices:
@@ -57,7 +59,7 @@ cdef class Polygon(object):
             vertices_2d.append(vertice.project2d(shift))
         return(vertices_2d)
 
-    cpdef get_normal3(self):
+    cpdef get_normal(self):
         """
         calculate normal vector to polygon
         the returned result is not normalized
@@ -74,7 +76,7 @@ cdef class Polygon(object):
         normal = v1.cross(v2)
         return(normal)
 
-    cpdef get_normal(self):
+    cpdef get_normal_new(self):
         """
         calculate normal vector to polygon
         the returned result is not normalized
@@ -89,7 +91,7 @@ cdef class Polygon(object):
             normal += self.vertices[index].cross(self.vertices[index+1])
         return(normal)
 
-    cpdef get_area(self):
+    cpdef double get_area(self):
         """
         are is defined as the half of the lenght of the polygon normal
         """
@@ -107,11 +109,10 @@ cdef class Polygon(object):
         cdef double avg_x = 0.0
         cdef double avg_y = 0.0
         cdef double avg_z = 0.0
-        for vector in self.vertices:
-            avg_x += vector[0]
-            avg_y += vector[1]
-            avg_z += vector[2]
-        return(Vector.from_tuple(avg_x, avg_y, avg_z))
+        pos_vec = self.vertices[0]
+        for vector in self.vertices[1:]:
+            pos_vec += vector
+        return(pos_vec / self.len_vertices)
 
     def __richcmp__(obj1, obj2, method):
         if method == 0: # < __lt__

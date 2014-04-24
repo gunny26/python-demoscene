@@ -82,7 +82,7 @@ def test():
 
 if __name__ == "__main__":
     #test()
-    ##sys.exit(0)
+    #sys.exit(0)
     import cProfile
     import pstats
     profile = "profiles/%s.profile" % sys.argv[0].split(".")[0]

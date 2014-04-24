@@ -5,7 +5,7 @@ import sys
 
 # set profiling globally
 from Cython.Compiler.Options import directive_defaults
-directive_defaults['profile'] = False
+directive_defaults['profile'] = True
 
 # extra compile flags
 extra_compile_args = ["-O3"]

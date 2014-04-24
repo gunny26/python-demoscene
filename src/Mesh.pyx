@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# cython: profile=True
 
 import math
 import pygame
@@ -69,7 +70,8 @@ cdef class Mesh(object):
         transformation = self.transformations[self.frames % self.len_transformations]
         for polygon in self.polygons:
             # apply transformation
-            newpolygon = polygon.transform(transformation).shift(self.shift_vec)
+            newpolygon = polygon.transform(transformation)
+            newpolygon.ishift(self.shift_vec)
             # get new position vector
             pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource
@@ -79,7 +81,7 @@ cdef class Mesh(object):
             # calculate angle between face normal and vector to light source
             light_angle = normal.angle_to(v_light)
             # angle to light source in radians, between 0 and math.pi
-            normal_color = int(light_angle * 255/math.pi)
+            normal_color = int(light_angle * 255 / math.pi)
             #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
             color = pygame.Color(normal_color, normal_color, normal_color, 255)
             pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin), 0)

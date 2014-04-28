@@ -5,23 +5,21 @@ import math
 import numpy as np
 cimport numpy as np
 # own modules
-from Vector import Vector as Vector
-from Matrix3d import Matrix3d as Matrix3d
 from Polygon import Polygon as Polygon
 
-cpdef project(vec1, int win_width, int win_height, double fov, double viewer_distance):
+cpdef np.ndarray project(vec1, int win_width, int win_height, double fov, double viewer_distance):
     cdef double factor
     cdef double x
     cdef double y
     factor = fov / (viewer_distance + vec1[2])
     x = vec1[0] * factor + win_width / 2
     y = -vec1[1] * factor + win_height / 2
-    return(Vector.from_tuple(x, y, 1))
+    return(np.array((x, y, 1)))
 
-cpdef get_identity_matrix():
-    return(Matrix3d(np.eye(3, dtype=np.float32)))
+cpdef np.ndarray get_identity_matrix():
+    return(np.eye(3, dtype=np.float32))
 
-cpdef get_rot_x_matrix(double theta):
+cpdef np.ndarray get_rot_x_matrix(double theta):
     """return rotation matrix around x axis
     return rotated version of self around X-Axis
     theta should be given in radians
@@ -34,12 +32,12 @@ cpdef get_rot_x_matrix(double theta):
     cdef double sin
     cos = math.cos(theta)
     sin = math.sin(theta)
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple(1,    0,   0),
-        Vector.from_tuple(0,  cos, sin),
-        Vector.from_tuple(0, -sin, cos)))
+    return(np.array((
+        (1,    0,   0),
+        (0,  cos, sin),
+        (0, -sin, cos))))
 
-cpdef get_rot_z_matrix(double theta):
+cpdef np.ndarray get_rot_z_matrix(double theta):
     """
     return rotated version of self around Z-Axis
     theta should be given in radians
@@ -52,12 +50,12 @@ cpdef get_rot_z_matrix(double theta):
     cdef double sin
     cos = math.cos(theta)
     sin = math.sin(theta)
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple(cos, -sin, 0),
-        Vector.from_tuple(sin,  cos, 0),
-        Vector.from_tuple(  0,    0, 1)))
+    return(np.array((
+        (cos, -sin, 0),
+        (sin,  cos, 0),
+        (  0,    0, 1))))
 
-cpdef get_rot_y_matrix(double theta):
+cpdef np.ndarray get_rot_y_matrix(double theta):
     """
     return rotated version of self around Y-Axis
     theta should be given in radians
@@ -73,13 +71,13 @@ cpdef get_rot_y_matrix(double theta):
     # sin² + cos² = 1
     # sin = sqrt(1.0 - cos)
     sin = math.sin(theta)
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple( cos, 0, sin),
-        Vector.from_tuple(   0, 1,   0),
-        Vector.from_tuple(-sin, 0, cos)
-        ))
+    return(np.array((
+        ( cos, 0, sin),
+        (   0, 1,   0),
+        (-sin, 0, cos)
+        )))
 
-cpdef get_rot_align(vector1, vector2):
+cpdef np.ndarray get_rot_align(vector1, vector2):
     """
     return rotation matrix to rotate vector1 such that
 
@@ -101,13 +99,13 @@ cpdef get_rot_align(vector1, vector2):
     cross = vector2.cross(vector1)
     dot = vector2.dot(vector1)
     k = 1.0 / (1.0 + dot)
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple(cross[0] * cross[0] * k + dot    , cross[1] * cross[0] * k - cross[2], cross[2] * cross[0] * k + cross[1]),
-        Vector.from_tuple(cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot    , cross[2] * cross[1] * k - cross[0]),
-        Vector.from_tuple(cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot),
+    return(np.array(
+        (cross[0] * cross[0] * k + dot    , cross[1] * cross[0] * k - cross[2], cross[2] * cross[0] * k + cross[1]),
+        (cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot    , cross[2] * cross[1] * k - cross[0]),
+        (cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot),
         ))
 
-cpdef get_shift_vector(double x, double y, double z):
+cpdef np.ndarray get_shift_vector(double x, double y, double z):
     """
     return transformation matrix to shift vector
     | 0  0  0  x|
@@ -115,9 +113,9 @@ cpdef get_shift_vector(double x, double y, double z):
     | 0  0  0  z|
     | 0  0  0  1|
     """
-    return(Vector.from_tuple(x, y, z))
+    return(np.array((x, y, z)))
 
-cpdef get_scale_matrix(double x, double y, double z):
+cpdef np.ndarray get_scale_matrix(double x, double y, double z):
     """
     return transformation matrix to scale vector
     | x  0  0  0|
@@ -125,92 +123,93 @@ cpdef get_scale_matrix(double x, double y, double z):
     | 0  0  z  0|
     | 0  0  0  1|
     """
-    return(Matrix3d.from_row_vectors(
-        Vector.from_tuple( x, 0, 0),
-        Vector.from_tuple( 0, y, 0),
-        Vector.from_tuple( 0, 0, z),
-        ))
+    return(np.array((
+        ( x, 0, 0),
+        ( 0, y, 0),
+        ( 0, 0, z),
+        )))
 
-cpdef get_rectangle_points():
+cpdef np.ndarray get_rectangle_points():
     """basic rectangle vertices"""
-    points = [
-        Vector.from_tuple(-1,  1, 0),
-        Vector.from_tuple( 1,  1, 0),
-        Vector.from_tuple( 1, -1, 0),
-        Vector.from_tuple(-1, -1, 0),
-        Vector.from_tuple(-1,  1, 0),
-        ]
+    points = np.array([
+        (-1,  1, 0),
+        ( 1,  1, 0),
+        ( 1, -1, 0),
+        (-1, -1, 0),
+        (-1,  1, 0),
+        ])
     return(points)
 
-cpdef get_triangle_points():
+cpdef np.ndarray get_triangle_points():
     """basic triangle vertices"""
-    points = [
-        Vector.from_tuple(-1,  0, 0),
-        Vector.from_tuple( 0,  1, 0),
-        Vector.from_tuple( 1,  0, 0),
-        Vector.from_tuple(-1,  0, 0),
-        ]
+    points = np.array([
+        (-1,  0, 0),
+        ( 0,  1, 0),
+        ( 1,  0, 0),
+        (-1,  0, 0),
+        ])
     return(points)
 
-cpdef get_pyramid_polygons():
+cpdef list get_pyramid_polygons():
     cdef list polygons = []
     # front
-    face = Polygon(get_triangle_points())
-    face.itransform(get_rot_x_matrix(-math.pi/4))
-    face.ishift(Vector.from_tuple(0, 0, 1))
-    polygons.append(face)
+    face = get_triangle_points()
+    face = face.dot(get_rot_x_matrix(-math.pi/4))
+    face += np.array((0, 0, 1))
+    polygons.append(Polygon(face))
     # back
-    face = Polygon(get_triangle_points())
-    face.itransform(get_rot_x_matrix(math.pi/4))
-    face.ishift(Vector.from_tuple(0, 0, -1))
-    polygons.append(face)
+    face = get_triangle_points()
+    face = face.dot(get_rot_x_matrix(math.pi/4))
+    face += np.array((0, 0, -1))
+    polygons.append(Polygon(face))
     # left
-    face = Polygon(get_triangle_points())
-    face.itransform(get_rot_x_matrix(-math.pi/4))
-    face.itransform(get_rot_y_matrix(-math.pi/2))
-    face.ishift(Vector.from_tuple(1, 0, 0))
-    polygons.append(face)
+    face = get_triangle_points()
+    face = face.dot(get_rot_x_matrix(-math.pi/4))
+    face = face.dot(get_rot_y_matrix(-math.pi/2))
+    face += np.array((1, 0, 0))
+    polygons.append(Polygon(face))
     # right
-    face = Polygon(get_triangle_points())
-    face.itransform(get_rot_x_matrix(-math.pi/4))
-    face.itransform(get_rot_y_matrix(math.pi/2))
-    face.ishift(Vector.from_tuple(-1, 0, 0))
-    polygons.append(face)
-
-cpdef get_cube_polygons():
-    # a cube consist of six faces
-    # left
-    cdef list polygons = []
-    face = Polygon(get_rectangle_points())
-    face.itransform(get_rot_y_matrix(math.pi/2))
-    face.ishift(Vector.from_tuple(-1, 0, 0))
-    polygons.append(face)
-    # right
-    face = Polygon(get_rectangle_points())
-    face.itransform(get_rot_y_matrix(math.pi/2))
-    face.ishift(Vector.from_tuple(1, 0, 0))
-    polygons.append(face)
-    # bottom
-    face = Polygon(get_rectangle_points())
-    face.itransform(get_rot_x_matrix(math.pi/2))
-    face.ishift(Vector.from_tuple(0, -1, 0))
-    polygons.append(face)
-    # top
-    face = Polygon(get_rectangle_points())
-    face.itransform(get_rot_x_matrix(math.pi/2))
-    face.ishift(Vector.from_tuple(0, 1, 0))
-    polygons.append(face)
-    # front
-    face = Polygon(get_rectangle_points())
-    face.ishift(Vector.from_tuple(0, 0, -1))
-    polygons.append(face)
-    # back
-    face = Polygon(get_rectangle_points())
-    face.ishift(Vector.from_tuple(0, 0, 1))
+    face = get_triangle_points()
+    face = face.dot(get_rot_x_matrix(-math.pi/4))
+    face = face.dot(get_rot_y_matrix(math.pi/2))
+    face += np.array((-1, 0, 0))
     polygons.append(face)
     return(polygons)
 
-cpdef get_scale_rot_matrix(scale, aspect):
+cpdef list get_cube_polygons():
+    # a cube consist of six faces
+    # left
+    cdef list polygons = []
+    face = get_rectangle_points()
+    face = face.dot(get_rot_y_matrix(math.pi/2))
+    face += np.array((-1, 0, 0))
+    polygons.append(Polygon(face))
+    # right
+    face = get_rectangle_points()
+    face = face.dot(get_rot_y_matrix(math.pi/2))
+    face += np.array((1, 0, 0))
+    polygons.append(Polygon(face))
+    # bottom
+    face = get_rectangle_points()
+    face = face.dot(get_rot_x_matrix(math.pi/2))
+    face += np.array((0, -1, 0))
+    polygons.append(Polygon(face))
+    # top
+    face = get_rectangle_points()
+    face = face.dot(get_rot_x_matrix(math.pi/2))
+    face += np.array((0, 1, 0))
+    polygons.append(Polygon(face))
+    # front
+    face = get_rectangle_points()
+    face += np.array((0, 0, -1))
+    polygons.append(Polygon(face))
+    # back
+    face = get_rectangle_points()
+    face += np.array((0, 0, 1))
+    polygons.append(Polygon(face))
+    return(polygons)
+
+cpdef np.ndarray get_scale_rot_matrix(scale, aspect):
     """
     create a affinde transformation matrix
 
@@ -223,33 +222,26 @@ cpdef get_scale_rot_matrix(scale, aspect):
     rotates around x/y/z in 1 degree steps and precalculates
     360 different matrices
     """
-    # scale and change basis, and shift
-    # assert len(scale) == 3
-    # assert len(shift) == 3
-    # assert len(aspect) == 2
     cdef double aspect_ratio
     scale_matrix = get_scale_matrix(*scale)
     aspect_ratio = aspect[0] / aspect[1]
-    alt_basis = Matrix3d.from_row_vectors(
-        Vector.from_tuple(1, 0, 0),
-        Vector.from_tuple(0, aspect_ratio, 0),
-        Vector.from_tuple(0, 0, 1),
-        )
-    alt_basis_inv = alt_basis.inverse()
+    alt_basis = np.array((
+        (1, 0, 0),
+        (0, aspect_ratio, 0),
+        (0, 0, 1),
+        ))
+    alt_basis_inv = np.linalg.inv(alt_basis)
     # combine scale and change of basis to one transformation
     # static matrix
-    static_transformation = alt_basis_inv.mul_matrix(scale_matrix)
+    static_transformation = alt_basis_inv.dot(scale_matrix)
     return(static_transformation)
 
-cpdef get_rot_matrix(static_transformation, tuple degrees, int steps):
+cpdef list get_rot_matrix(static_transformation, tuple degrees, int steps):
     """
     static_transformation of type Matrix3d, will be applied to every step
     degrees of type tuple, for every axis one entry in degrees
     steps of type int, how many steps to precalculate
     """
-    #assert len(degrees) == 3
-    #assert type(steps) == int
-    #assert isinstance(static_transformation, Matrix3d)
     cdef double angle_x
     cdef double angle_y
     cdef double angle_z
@@ -264,11 +256,50 @@ cpdef get_rot_matrix(static_transformation, tuple degrees, int steps):
         angle_y = degrees[1] * factor
         angle_z = degrees[2] * factor
         # this part of tranformation is calculate on every step
-        transformation = get_rot_z_matrix(angle_z).mul_matrix(
-                get_rot_x_matrix(angle_x).mul_matrix(
+        transformation = get_rot_z_matrix(angle_z).dot(
+                get_rot_x_matrix(angle_x).dot(
                     get_rot_y_matrix(angle_y)))
         # combine with static part of transformation
-        transformations.append(static_transformation.mul_matrix(transformation))
+        transformations.append(static_transformation.dot(transformation))
     return(transformations)
+
+cpdef np.ndarray normalized(np.ndarray vector):
+    """
+    return self with length=1, unit vector
+    """
+    return(vector / np.linalg.norm(vector))
+unit = normalized
+
+cpdef tuple project2d(np.ndarray vector, tuple shift_vec):
+    """
+    project self to 2d
+    simply divide x and y with z value
+    """
+    shifted = vector / vector.data[2]
+    return((shifted[0] + shift_vec[0], shifted[1] + shift_vec[1]))
+
+cpdef double angle_to(vector, other):
+    """
+    angle between self and other Vector object
+    to calculate this, the dot product of self and other is used
+    """
+    cdef np.ndarray v1
+    cdef np.ndarray v2
+    v1 = vector / np.linalg.norm(vector)
+    v2 = other / np.linalg.norm(other)
+    cdef double dotproduct = v1.dot(v2)
+    return(math.acos(dotproduct))
+
+cpdef double angle_to_unit(vector, other):
+    """this version assumes that these two vectors are unit vectors"""
+    return(math.acos(vector.dot(other)))
+
+cpdef double length(vector):
+    """length"""
+    return(np.linalg.norm(vector))
+
+cpdef double length_sqrd(vector):
+    """length squared"""
+    return(vector.dot(vector))
 
 

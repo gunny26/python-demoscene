@@ -4,12 +4,13 @@ import pygame
 import sys
 import math
 import time
+import numpy as np
 # own modules
-from Vector import Vector as Vector
-from Matrix3d import Matrix3d as Matrix3d
+#from Vector import Vector as Vector
+#from Matrix3d import Matrix3d as Matrix3d
 #from Utils3d import Utils3d as Utils3d
 import Utils3d
-from Polygon import Polygon as Polygon
+#from Polygon import Polygon as Polygon
 from Mesh import Mesh as Mesh
 
 def test():
@@ -34,7 +35,7 @@ def test():
                                     aspect=(16, 9)),
                                 degrees=((x-y+20)/50, (y-x+40)/50, 3),
                                 steps=360),
-                        shift = Vector.from_tuple(0, 0, -20),
+                        shift = np.array((0, 0, -20)),
                         polygons = cube)
                 )
         clock = pygame.time.Clock()       
@@ -81,8 +82,8 @@ def test():
         print 'shutting down'
 
 if __name__ == "__main__":
-    #test()
-    #sys.exit(0)
+    test()
+    sys.exit(0)
     import cProfile
     import pstats
     profile = "profiles/%s.profile" % sys.argv[0].split(".")[0]

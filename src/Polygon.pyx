@@ -1,65 +1,76 @@
 #!/usr/bin/python
-# cython: profile=True
 # -*- coding: utf-8 -*-
 
 import math
 import numpy as np
 cimport numpy as np
-from Vector import Vector as Vector
 
 cdef class Polygon(object):
-    """this polygon consists of n-vertices"""
+    """this polygon consists of n-vertices
+    stores a number prefereable 3 or 4 of (triangle or rectangle)
+    numpy ndarray verctor
+    with dimension 3 or 4 (homogeneous)
+    """
 
-    cdef list vertices
+    cdef np.ndarray vertices
     cdef int len_vertices
 
-    def __init__(self, list vertices):
+    def __init__(self, np.ndarray vertices):
+        """
+        vertices is a list if numpy ndarrays
+        position 0 = x
+        position 1 = y
+        position 2 = z
+        position 3 = h homogeneous, optional
+        """
         # vertices should be list of ndarrays
         self.vertices = vertices
         self.len_vertices = len(vertices)
 
     cpdef double get_avg_z(self):
         """return average z of vertices"""
-        cdef double avg_z = 0.0
-        for vector in self.vertices:
-            avg_z += vector[1]
-        return(avg_z / self.len_vertices)
+        return(self.vertices[:,2] / self.len_vertices)
 
     cpdef Polygon shift(self, np.ndarray shift_vector):
         """return shifted vertices"""
-        new_vertices = []
-        for vector in self.vertices:
-            new_vertices.append(vector + shift_vector)
+        cdef np.ndarray new_vertices = self.vertices.copy()
+        cdef int row
+        for row in range(self.len_vertices):
+            new_vertices[row] = self.vertices[row] + shift_vector
         return(Polygon(new_vertices))
 
-    cpdef ishift(self, np.ndarray shift_vector):
+    cpdef Polygon ishift(self, np.ndarray shift_vector):
         """shift vertices inplace"""
-        cdef int counter
-        for counter in range(self.len_vertices):
-            self.vertices[counter] += shift_vector
+        cdef int row
+        for row in range(self.len_vertices):
+            self.vertices[row] += shift_vector
+        return(self)
 
-    cpdef itransform(self, np.ndarray matrix):
-        """apply transformation to all vertices"""
-        cdef int counter
-        for counter in range(self.len_vertices):
-            self.vertices[counter] = matrix * self.vertices[counter]
+    cpdef Polygon itransform(self, np.ndarray matrix):
+        """apply transformation to all vertices
+        matrix must have the same number as columns, than the length of out vector
+        """
+        cdef int row
+        for row in range(self.len_vertices):
+            self.vertices[row] = matrix.dot(self.vertices[row])
+        return(self)
 
-    cpdef Polygon transform(self, object matrix):
+    cpdef Polygon transform(self, np.ndarray matrix):
         """apply transformation to all vertices"""
-        new_vertices = []
-        for vector in self.vertices:
-            new_vertices.append(matrix.mul_vec(vector))
+        cdef np.ndarray new_vertices = self.vertices.copy()
+        cdef int row
+        for row in range(self.len_vertices):
+            new_vertices[row] = matrix.dot(self.vertices[row])
         return(Polygon(new_vertices))
 
     cpdef list projected(self, shift):
         """return point list in 2d for polygon method of pygame.draw"""
-        cdef list vertices_2d
-        vertices_2d = []
-        for vertice in self.vertices:
-            vertices_2d.append(vertice.project2d(shift))
+        cdef list vertices_2d = []
+        for vector in self.vertices:
+            vertices_2d.append((vector[0] / vector[2] + shift[0], vector[1] / vector[2] + shift[1]))
         return(vertices_2d)
 
-    cpdef get_normal(self):
+    cpdef np.ndarray get_normal(self):
         """
         calculate normal vector to polygon
         the returned result is not normalized
@@ -70,25 +81,27 @@ cdef class Polygon(object):
         get v2 = (C-A)
         normal = cross(v1 and v2)
         """
-        # get at least two vectors on plan
+        # get at least two vectors on plane to calculate normal
         v1 = self.vertices[0] - self.vertices[1]
         v2 = self.vertices[0] - self.vertices[2]
-        normal = v1.cross(v2)
+        normal = np.cross(v1, v2)
         return(normal)
 
-    cpdef get_normal_new(self):
+    cpdef np.ndarray get_normal_new(self):
         """
         calculate normal vector to polygon
-        the returned result is not normalized
+        the returned result is normalized
 
         this is the implementation from 
         http://www.iquilezles.org/www/articles/areas/areas.htm
         it workes generally for n-vertices polygons
+
+        sum all edge normal vector, finally normalize result
         """
         cdef int index
-        normal = Vector.from_tuple(0, 0, 0)
+        normal = np.zeros(3)
         for index in range(self.len_vertices - 1):
-            normal += self.vertices[index].cross(self.vertices[index+1])
+            normal += np.linalg.cross(self.vertices[index], self.vertices[index+1])
         return(normal)
 
     cpdef double get_area(self):
@@ -97,18 +110,15 @@ cdef class Polygon(object):
         """
         cdef double area
         normal = self.get_normal()
-        area = normal.length() / 2.0
+        area = np.linalg.norm(normal) / 2.0
         return(area)
 
-    cpdef get_position_vector(self):
+    cpdef np.ndarray get_position_vector(self):
         """
         return virtual position vector, as
         average of all axis
         it should point to the middle of the polygon
         """
-        cdef double avg_x = 0.0
-        cdef double avg_y = 0.0
-        cdef double avg_z = 0.0
         pos_vec = self.vertices[0]
         for vector in self.vertices[1:]:
             pos_vec += vector

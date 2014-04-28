@@ -27,15 +27,15 @@ def test():
                 objects.append(
                     Mesh(
                         surface,
-                        origin=(x, y), 
+                        origin=(0, 0), 
                         transformations=
                             Utils3d.get_rot_matrix(
                                 Utils3d.get_scale_rot_matrix(
-                                    scale=(200,200,1), 
-                                    aspect=(16, 9)),
+                                    scale_tuple=(200,200,1), 
+                                    aspect_tuple=(16, 9),
+                                    shift_tuple=(x*2, y*2, -10)),
                                 degrees=((x-y+20)/50, (y-x+40)/50, 3),
                                 steps=360),
-                        shift = np.array((0, 0, -20)),
                         polygons = cube)
                 )
         clock = pygame.time.Clock()       
@@ -43,7 +43,7 @@ def test():
         color = pygame.Color(255, 255, 255, 255)
         print "Matrix precalculations done in %s seconds" % (time.time()-total_starttime)
         anim_starttime = time.time()
-        frames = 100
+        frames = 1000
         while frames > 0:
             #clock.tick(fps)
             events = pygame.event.get()  

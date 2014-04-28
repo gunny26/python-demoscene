@@ -12,7 +12,7 @@ cdef class Polygon(object):
     with dimension 3 or 4 (homogeneous)
     """
 
-    cdef np.ndarray vertices
+    cdef public np.ndarray vertices
     cdef int len_vertices
 
     def __init__(self, np.ndarray vertices):
@@ -30,21 +30,6 @@ cdef class Polygon(object):
     cpdef double get_avg_z(self):
         """return average z of vertices"""
         return(self.vertices[:,2] / self.len_vertices)
-
-    cpdef Polygon shift(self, np.ndarray shift_vector):
-        """return shifted vertices"""
-        cdef np.ndarray new_vertices = self.vertices.copy()
-        cdef int row
-        for row in range(self.len_vertices):
-            new_vertices[row] = self.vertices[row] + shift_vector
-        return(Polygon(new_vertices))
-
-    cpdef Polygon ishift(self, np.ndarray shift_vector):
-        """shift vertices inplace"""
-        cdef int row
-        for row in range(self.len_vertices):
-            self.vertices[row] += shift_vector
-        return(self)
 
     cpdef Polygon itransform(self, np.ndarray matrix):
         """apply transformation to all vertices
@@ -67,7 +52,7 @@ cdef class Polygon(object):
         """return point list in 2d for polygon method of pygame.draw"""
         cdef list vertices_2d = []
         for vector in self.vertices:
-            vertices_2d.append((vector[0] / vector[2] + shift[0], vector[1] / vector[2] + shift[1]))
+            vertices_2d.append((vector[0] / abs(vector[2]) + shift[0], vector[1] / abs(vector[2]) + shift[1]))
         return(vertices_2d)
 
     cpdef np.ndarray get_normal(self):
@@ -139,8 +124,5 @@ cdef class Polygon(object):
             return(obj1.get_avg_z() >= obj2.self.avg_z())
  
     def __str__(self):
-        sb = ""
-        for vertice in self.vertices:
-            sb += (str(vertice))
-        return(sb)
+        return(str(self.vertices))
 

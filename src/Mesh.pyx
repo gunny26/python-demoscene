@@ -17,14 +17,13 @@ cdef class Mesh(object):
     cdef list polygons
     cdef np.ndarray shift_vec
 
-    def __init__(self, surface, tuple origin, np.ndarray shift, transformations=None, polygons=None):
+    def __init__(self, surface, tuple origin, transformations=None, polygons=None):
         """
         pygame surface to draw on
         center positon of mesh in 2d space
         """
         self.surface = surface
         self.origin = origin
-        self.shift_vec = shift # should be type np.ndarray
         self.frames = 0
         # initialze list of transformations applied to every face
         self.transformations = transformations
@@ -63,9 +62,8 @@ cdef class Mesh(object):
         transformation = self.transformations[self.frames % self.len_transformations]
         color = pygame.Color(200, 200, 200, 255)
         for polygon in self.polygons:
-            # apply transformation
+            # apply transformation to every vertice in polygon
             newpolygon = polygon.transform(transformation)
-            newpolygon.ishift(self.shift_vec)
             # get new position vector
             #pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource

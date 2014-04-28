@@ -17,7 +17,7 @@ cpdef np.ndarray project(vec1, int win_width, int win_height, double fov, double
     return(np.array((x, y, 1)))
 
 cpdef np.ndarray get_identity_matrix():
-    return(np.eye(3, dtype=np.float32))
+    return(np.eye(4, dtype=np.float32))
 
 cpdef np.ndarray get_rot_x_matrix(double theta):
     """return rotation matrix around x axis
@@ -33,9 +33,11 @@ cpdef np.ndarray get_rot_x_matrix(double theta):
     cos = math.cos(theta)
     sin = math.sin(theta)
     return(np.array((
-        (1,    0,   0),
-        (0,  cos, sin),
-        (0, -sin, cos))))
+        (1,    0,   0, 0),
+        (0,  cos, sin, 0),
+        (0, -sin, cos, 0),
+        (0,    0,   0, 1)
+        )))
 
 cpdef np.ndarray get_rot_z_matrix(double theta):
     """
@@ -51,9 +53,11 @@ cpdef np.ndarray get_rot_z_matrix(double theta):
     cos = math.cos(theta)
     sin = math.sin(theta)
     return(np.array((
-        (cos, -sin, 0),
-        (sin,  cos, 0),
-        (  0,    0, 1))))
+        (cos, -sin, 0, 0),
+        (sin,  cos, 0, 0),
+        (  0,    0, 1, 0),
+        (  0,    0, 0, 1)
+        )))
 
 cpdef np.ndarray get_rot_y_matrix(double theta):
     """
@@ -72,9 +76,10 @@ cpdef np.ndarray get_rot_y_matrix(double theta):
     # sin = sqrt(1.0 - cos)
     sin = math.sin(theta)
     return(np.array((
-        ( cos, 0, sin),
-        (   0, 1,   0),
-        (-sin, 0, cos)
+        ( cos, 0, sin, 0),
+        (   0, 1,   0, 0),
+        (-sin, 0, cos, 0),
+        (   0, 0,   0, 1)
         )))
 
 cpdef np.ndarray get_rot_align(vector1, vector2):
@@ -99,21 +104,27 @@ cpdef np.ndarray get_rot_align(vector1, vector2):
     cross = vector2.cross(vector1)
     dot = vector2.dot(vector1)
     k = 1.0 / (1.0 + dot)
-    return(np.array(
-        (cross[0] * cross[0] * k + dot    , cross[1] * cross[0] * k - cross[2], cross[2] * cross[0] * k + cross[1]),
-        (cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot    , cross[2] * cross[1] * k - cross[0]),
-        (cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot),
-        ))
+    return(np.array((
+        (cross[0] * cross[0] * k + dot     , cross[1] * cross[0] * k - cross[2], cross[2] * cross[0] * k + cross[1], 0),
+        (cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot     , cross[2] * cross[1] * k - cross[0], 0),
+        (cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot,      0),
+        (                                 0,                                  0,                                     1)
+        )))
 
-cpdef np.ndarray get_shift_vector(double x, double y, double z):
+cpdef np.ndarray get_shift_matrix(double x, double y, double z):
     """
     return transformation matrix to shift vector
-    | 0  0  0  x|
-    | 0  0  0  y|
-    | 0  0  0  z|
-    | 0  0  0  1|
+    | 1  0  0  sx| |x| |x+sx|
+    | 0  1  0  sy| |y| |y+sy|
+    | 0  0  1  sz|.|z|=|z+sz|
+    | 0  0  0   1| |1| |   1|
     """
-    return(np.array((x, y, z)))
+    return(np.array((
+        (1, 0, 0, x), 
+        (0, 1, 0, y), 
+        (0, 0, 1, z),
+        (0, 0, 0, 1)
+        )))
 
 cpdef np.ndarray get_scale_matrix(double x, double y, double z):
     """
@@ -124,29 +135,30 @@ cpdef np.ndarray get_scale_matrix(double x, double y, double z):
     | 0  0  0  1|
     """
     return(np.array((
-        ( x, 0, 0),
-        ( 0, y, 0),
-        ( 0, 0, z),
+        (x, 0, 0, 0),
+        (0, y, 0, 0),
+        (0, 0, z, 0),
+        (0, 0, 0, 1)
         )))
 
 cpdef np.ndarray get_rectangle_points():
     """basic rectangle vertices"""
     points = np.array([
-        (-1,  1, 0),
-        ( 1,  1, 0),
-        ( 1, -1, 0),
-        (-1, -1, 0),
-        (-1,  1, 0),
+        (-1,  1, 0, 1),
+        ( 1,  1, 0, 1),
+        ( 1, -1, 0, 1),
+        (-1, -1, 0, 1),
+        (-1,  1, 0, 1),
         ])
     return(points)
 
 cpdef np.ndarray get_triangle_points():
     """basic triangle vertices"""
     points = np.array([
-        (-1,  0, 0),
-        ( 0,  1, 0),
-        ( 1,  0, 0),
-        (-1,  0, 0),
+        (-1,  0, 0, 1),
+        ( 0,  1, 0, 1),
+        ( 1,  0, 0, 1),
+        (-1,  0, 0, 1),
         ])
     return(points)
 
@@ -154,25 +166,26 @@ cpdef list get_pyramid_polygons():
     cdef list polygons = []
     # front
     face = get_triangle_points()
-    face = face.dot(get_rot_x_matrix(-math.pi/4))
-    face += np.array((0, 0, 1))
+    transform = get_shift_matrix(0, 0, 1).dot(get_rot_x_matrix(-math.pi/4))
+    face = face.dot(transform)
+    face = face.dot(get_shift_matrix(0, 0, 1))
     polygons.append(Polygon(face))
     # back
     face = get_triangle_points()
     face = face.dot(get_rot_x_matrix(math.pi/4))
-    face += np.array((0, 0, -1))
+    face = face.dot(get_shift_matrix(0, 0, -1))
     polygons.append(Polygon(face))
     # left
     face = get_triangle_points()
     face = face.dot(get_rot_x_matrix(-math.pi/4))
     face = face.dot(get_rot_y_matrix(-math.pi/2))
-    face += np.array((1, 0, 0))
+    face = face.dot(get_shift_matrix(1, 0, 0))
     polygons.append(Polygon(face))
     # right
     face = get_triangle_points()
     face = face.dot(get_rot_x_matrix(-math.pi/4))
     face = face.dot(get_rot_y_matrix(math.pi/2))
-    face += np.array((-1, 0, 0))
+    face = face.dot(get_shift_matrix(-1, 0, 0))
     polygons.append(face)
     return(polygons)
 
@@ -180,36 +193,27 @@ cpdef list get_cube_polygons():
     # a cube consist of six faces
     # left
     cdef list polygons = []
-    face = get_rectangle_points()
-    face = face.dot(get_rot_y_matrix(math.pi/2))
-    face += np.array((-1, 0, 0))
-    polygons.append(Polygon(face))
+    rec = Polygon(get_rectangle_points())
+    t = get_shift_matrix(-1, 0, 0).dot(get_rot_y_matrix(math.pi/2))
+    polygons.append(rec.transform(t))
     # right
-    face = get_rectangle_points()
-    face = face.dot(get_rot_y_matrix(math.pi/2))
-    face += np.array((1, 0, 0))
-    polygons.append(Polygon(face))
+    t = get_shift_matrix(1, 0, 0).dot(get_rot_y_matrix(math.pi/2))
+    polygons.append(rec.transform(t))
     # bottom
-    face = get_rectangle_points()
-    face = face.dot(get_rot_x_matrix(math.pi/2))
-    face += np.array((0, -1, 0))
-    polygons.append(Polygon(face))
+    t = get_shift_matrix(0, -1, 0).dot(get_rot_x_matrix(math.pi/2))
+    polygons.append(rec.transform(t))
     # top
-    face = get_rectangle_points()
-    face = face.dot(get_rot_x_matrix(math.pi/2))
-    face += np.array((0, 1, 0))
-    polygons.append(Polygon(face))
+    t = get_shift_matrix(0, 1, 0).dot(get_rot_x_matrix(math.pi/2))
+    polygons.append(rec.transform(t))
     # front
-    face = get_rectangle_points()
-    face += np.array((0, 0, -1))
-    polygons.append(Polygon(face))
+    t = get_shift_matrix(0, 0, -1)
+    polygons.append(rec.transform(t))
     # back
-    face = get_rectangle_points()
-    face += np.array((0, 0, 1))
-    polygons.append(Polygon(face))
+    t = get_shift_matrix(0, 0, 1)
+    polygons.append(rec.transform(t))
     return(polygons)
 
-cpdef np.ndarray get_scale_rot_matrix(scale, aspect):
+cpdef np.ndarray get_scale_rot_matrix(scale_tuple, aspect_tuple, shift_tuple):
     """
     create a affinde transformation matrix
 
@@ -223,17 +227,19 @@ cpdef np.ndarray get_scale_rot_matrix(scale, aspect):
     360 different matrices
     """
     cdef double aspect_ratio
-    scale_matrix = get_scale_matrix(*scale)
-    aspect_ratio = aspect[0] / aspect[1]
+    scale_matrix = get_scale_matrix(*scale_tuple)
+    shift_matrix = get_shift_matrix(*shift_tuple)
+    aspect_ratio = aspect_tuple[0] / aspect_tuple[1]
     alt_basis = np.array((
-        (1, 0, 0),
-        (0, aspect_ratio, 0),
-        (0, 0, 1),
+        (1, 0, 0, 0),
+        (0, aspect_ratio, 0, 0),
+        (0, 0, 1, 0),
+        (0, 0, 0, 1)
         ))
     alt_basis_inv = np.linalg.inv(alt_basis)
     # combine scale and change of basis to one transformation
     # static matrix
-    static_transformation = alt_basis_inv.dot(scale_matrix)
+    static_transformation = shift_matrix.dot(alt_basis_inv.dot(scale_matrix))
     return(static_transformation)
 
 cpdef list get_rot_matrix(static_transformation, tuple degrees, int steps):
@@ -260,7 +266,8 @@ cpdef list get_rot_matrix(static_transformation, tuple degrees, int steps):
                 get_rot_x_matrix(angle_x).dot(
                     get_rot_y_matrix(angle_y)))
         # combine with static part of transformation
-        transformations.append(static_transformation.dot(transformation))
+        t = static_transformation.dot(transformation)
+        transformations.append(t)
     return(transformations)
 
 cpdef np.ndarray normalized(np.ndarray vector):

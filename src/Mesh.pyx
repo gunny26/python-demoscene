@@ -3,13 +3,17 @@
 import math
 import pygame
 import numpy as np
+DTYPE = np.float64()
 cimport numpy as np
+ctypedef np.float64_t DTYPE_t
 import Utils3d
 
 cdef class Mesh(object):
     """abstract class to represent mesh of polygons"""
 
     cdef object surface
+    cdef int origin_x
+    cdef int origin_y
     cdef tuple origin
     cdef int frames
     cdef int len_transformations
@@ -23,7 +27,7 @@ cdef class Mesh(object):
         center positon of mesh in 2d space
         """
         self.surface = surface
-        self.origin = origin
+        (self.origin_x, self.origin_y) = origin
         self.frames = 0
         # initialze list of transformations applied to every face
         self.transformations = transformations
@@ -54,9 +58,14 @@ cdef class Mesh(object):
 
         finally painting on surface is called
         """
+        cdef np.ndarray light_positon
+        cdef np.ndarray pos_vec
+        cdef np.ndarray v_light
+        cdef np.ndarray normal
+        cdef double light_angle
         cdef int normal_color
         # light from above
-        light_position = np.ndarray((0, 0, 10))
+        light_position = np.array((0.0, 0.0, 10.0, 1.0), dtype=DTYPE)
         # apply linear transformations to vetices
         # daw faces fom lowe z to higher
         transformation = self.transformations[self.frames % self.len_transformations]
@@ -65,16 +74,16 @@ cdef class Mesh(object):
             # apply transformation to every vertice in polygon
             newpolygon = polygon.transform(transformation)
             # get new position vector
-            #pos_vec = newpolygon.get_position_vector()
+            pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource
-            #v_light = pos_vec - light_position
+            v_light = pos_vec - light_position
             # get the normal of the face
-            #normal = newpolygon.get_normal()
+            normal = newpolygon.get_normal_faster()
             # calculate angle between face normal and vector to light source
-            #light_angle = Utils3d.angle_to(normal, v_light)
+            light_angle = Utils3d.angle_to(normal, v_light)
             # angle to light source in radians, between 0 and math.pi
-            #normal_color = int(light_angle * 255 / math.pi)
+            normal_color = int(light_angle * 255 / math.pi)
             #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
-            #color = pygame.Color(normal_color, normal_color, normal_color, 255)
-            pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin), 1)
+            color = pygame.Color(normal_color, normal_color, normal_color, 255)
+            pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin_x, self.origin_y), 0)
         self.frames += 1

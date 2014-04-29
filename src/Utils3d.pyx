@@ -4,6 +4,8 @@
 import math
 import numpy as np
 cimport numpy as np
+DTYPE = np.float64
+ctypedef np.float64_t DTYPE_t
 # own modules
 from Polygon import Polygon as Polygon
 
@@ -14,10 +16,10 @@ cpdef np.ndarray project(vec1, int win_width, int win_height, double fov, double
     factor = fov / (viewer_distance + vec1[2])
     x = vec1[0] * factor + win_width / 2
     y = -vec1[1] * factor + win_height / 2
-    return(np.array((x, y, 1)))
+    return(np.array((x, y, 1), dtype=DTYPE))
 
 cpdef np.ndarray get_identity_matrix():
-    return(np.eye(4, dtype=np.float32))
+    return(np.eye(4))
 
 cpdef np.ndarray get_rot_x_matrix(double theta):
     """return rotation matrix around x axis
@@ -28,16 +30,14 @@ cpdef np.ndarray get_rot_x_matrix(double theta):
     |0   cos θ    -sin θ| |y| = |y cos θ - z sin θ| = |y'|
     |0   sin θ     cos θ| |z|   |y sin θ + z cos θ|   |z'|
     """
-    cdef double cos
-    cdef double sin
-    cos = math.cos(theta)
-    sin = math.sin(theta)
+    cdef double cos = math.cos(theta)
+    cdef double sin = math.sin(theta)
     return(np.array((
         (1,    0,   0, 0),
         (0,  cos, sin, 0),
         (0, -sin, cos, 0),
         (0,    0,   0, 1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_rot_z_matrix(double theta):
     """
@@ -48,16 +48,14 @@ cpdef np.ndarray get_rot_z_matrix(double theta):
     |sin θ    cos θ   0| |y| = |x sin θ + y cos θ| = |y'|
     |  0       0      1| |z|   |        z        |   |z'|
     """
-    cdef double cos
-    cdef double sin
-    cos = math.cos(theta)
-    sin = math.sin(theta)
+    cdef double cos = math.cos(theta)
+    cdef double sin = math.sin(theta)
     return(np.array((
         (cos, -sin, 0, 0),
         (sin,  cos, 0, 0),
         (  0,    0, 1, 0),
         (  0,    0, 0, 1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_rot_y_matrix(double theta):
     """
@@ -68,19 +66,17 @@ cpdef np.ndarray get_rot_y_matrix(double theta):
     |     0    1       0| |y| = |         y        | = |y'|
     |-sin θ    0   cos θ| |z|   |-x sin θ + z cos θ|   |z'|
     """
-    cdef double cos
-    cdef double sin
-    cos = math.cos(theta)
+    cdef double cos = math.cos(theta)
+    cdef double sin =  math.sin(theta)
     # substitute sin with cos, but its not clear if this is faster
     # sin² + cos² = 1
     # sin = sqrt(1.0 - cos)
-    sin = math.sin(theta)
     return(np.array((
         ( cos, 0, sin, 0),
         (   0, 1,   0, 0),
         (-sin, 0, cos, 0),
         (   0, 0,   0, 1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_rot_align(vector1, vector2):
     """
@@ -109,7 +105,7 @@ cpdef np.ndarray get_rot_align(vector1, vector2):
         (cross[1] * cross[1] * k + cross[2], cross[1] * cross[1] * k + dot     , cross[2] * cross[1] * k - cross[0], 0),
         (cross[2] * cross[2] * k - cross[1], cross[1] * cross[2] * k + cross[0], cross[2] * cross[2] * k + dot,      0),
         (                                 0,                                  0,                                     1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_shift_matrix(double x, double y, double z):
     """
@@ -124,7 +120,7 @@ cpdef np.ndarray get_shift_matrix(double x, double y, double z):
         (0, 1, 0, y), 
         (0, 0, 1, z),
         (0, 0, 0, 1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_scale_matrix(double x, double y, double z):
     """
@@ -139,7 +135,7 @@ cpdef np.ndarray get_scale_matrix(double x, double y, double z):
         (0, y, 0, 0),
         (0, 0, z, 0),
         (0, 0, 0, 1)
-        )))
+        ), dtype=DTYPE))
 
 cpdef np.ndarray get_rectangle_points():
     """basic rectangle vertices"""
@@ -149,7 +145,7 @@ cpdef np.ndarray get_rectangle_points():
         ( 1, -1, 0, 1),
         (-1, -1, 0, 1),
         (-1,  1, 0, 1),
-        ])
+        ], dtype=DTYPE)
     return(points)
 
 cpdef np.ndarray get_triangle_points():
@@ -159,7 +155,7 @@ cpdef np.ndarray get_triangle_points():
         ( 0,  1, 0, 1),
         ( 1,  0, 0, 1),
         (-1,  0, 0, 1),
-        ])
+        ], dtype=DTYPE)
     return(points)
 
 cpdef list get_pyramid_polygons():
@@ -226,20 +222,19 @@ cpdef np.ndarray get_scale_rot_matrix(scale_tuple, aspect_tuple, shift_tuple):
     rotates around x/y/z in 1 degree steps and precalculates
     360 different matrices
     """
-    cdef double aspect_ratio
-    scale_matrix = get_scale_matrix(*scale_tuple)
-    shift_matrix = get_shift_matrix(*shift_tuple)
-    aspect_ratio = aspect_tuple[0] / aspect_tuple[1]
-    alt_basis = np.array((
+    cdef double aspect_ratio = aspect_tuple[0] / aspect_tuple[1]
+    cdef np.ndarray scale_matrix = get_scale_matrix(*scale_tuple)
+    cdef np.ndarray shift_matrix = get_shift_matrix(*shift_tuple)
+    cdef np.ndarray alt_basis = np.array((
         (1, 0, 0, 0),
         (0, aspect_ratio, 0, 0),
         (0, 0, 1, 0),
         (0, 0, 0, 1)
-        ))
-    alt_basis_inv = np.linalg.inv(alt_basis)
+        ), dtype=DTYPE)
+    cdef np.ndarray alt_basis_inv = np.linalg.inv(alt_basis)
     # combine scale and change of basis to one transformation
     # static matrix
-    static_transformation = shift_matrix.dot(alt_basis_inv.dot(scale_matrix))
+    cdef np.ndarray static_transformation = shift_matrix.dot(alt_basis_inv.dot(scale_matrix))
     return(static_transformation)
 
 cpdef list get_rot_matrix(static_transformation, tuple degrees, int steps):
@@ -252,22 +247,25 @@ cpdef list get_rot_matrix(static_transformation, tuple degrees, int steps):
     cdef double angle_y
     cdef double angle_z
     cdef int step
-    cdef list transformations
     cdef double deg2rad = math.pi / 180
     cdef double factor
+    cdef np.ndarray transformation
+    cdef list transformations
     transformations = []
     for step in range(steps):
         factor = step * deg2rad
         angle_x = degrees[0] * factor
         angle_y = degrees[1] * factor
         angle_z = degrees[2] * factor
-        # this part of tranformation is calculate on every step
+        # this part of tranformation is calculate for every step
         transformation = get_rot_z_matrix(angle_z).dot(
                 get_rot_x_matrix(angle_x).dot(
                     get_rot_y_matrix(angle_y)))
-        # combine with static part of transformation
-        t = static_transformation.dot(transformation)
-        transformations.append(t)
+        # combine with static part of transformation,
+        # which does scaling, shifting and aspect ration correction
+        # to get affine transformation matrix
+        transformation = static_transformation.dot(transformation)
+        transformations.append(transformation)
     return(transformations)
 
 cpdef np.ndarray normalized(np.ndarray vector):
@@ -294,6 +292,7 @@ cpdef double angle_to(vector, other):
     cdef np.ndarray v2
     v1 = vector / np.linalg.norm(vector)
     v2 = other / np.linalg.norm(other)
+    # print "%s dot %s" % (v1, v2)
     cdef double dotproduct = v1.dot(v2)
     return(math.acos(dotproduct))
 

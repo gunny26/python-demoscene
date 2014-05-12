@@ -65,7 +65,7 @@ cdef class Mesh(object):
         cdef double light_angle
         cdef int normal_color
         # light from above
-        light_position = np.array((0.0, 0.0, 10.0, 1.0), dtype=DTYPE)
+        #light_position = np.array((0.0, 0.0, 10.0, 1.0), dtype=DTYPE)
         # apply linear transformations to vetices
         # daw faces fom lowe z to higher
         transformation = self.transformations[self.frames % self.len_transformations]
@@ -74,16 +74,16 @@ cdef class Mesh(object):
             # apply transformation to every vertice in polygon
             newpolygon = polygon.transform(transformation)
             # get new position vector
-            pos_vec = newpolygon.get_position_vector()
+            #pos_vec = newpolygon.get_position_vector()
             # calculate vector from face to lightsource
-            v_light = pos_vec - light_position
+            #v_light = pos_vec - light_position
             # get the normal of the face
-            normal = newpolygon.get_normal_faster()
+            #normal = newpolygon.get_normal_faster()
             # calculate angle between face normal and vector to light source
-            light_angle = Utils3d.angle_to(normal, v_light)
+            #light_angle = Utils3d.angle_to(normal, v_light)
             # angle to light source in radians, between 0 and math.pi
-            normal_color = int(light_angle * 255 / math.pi)
+            #normal_color = int(light_angle * 255 / math.pi)
             #avg_z = max(min(abs(int(newface.get_avg_z() * 10)), 255), 0) 
-            color = pygame.Color(normal_color, normal_color, normal_color, 255)
-            pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin_x, self.origin_y), 0)
+            #color = pygame.Color(normal_color, normal_color, normal_color, 255)
+            pygame.draw.polygon(self.surface, color, newpolygon.projected(self.origin_x, self.origin_y), 1)
         self.frames += 1

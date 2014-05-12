@@ -4,11 +4,12 @@ import pygame
 import sys
 import os
 import math
-from scipy.weave import converters
+# from scipy.weave import converters
 import time
+import Plasma
+from Plasma import Plasma as Plasma
 
-
-class Plasma(object):
+class PlasmaPy(object):
     """Plasma Effect on Surface"""
 
     def __init__(self, surface, scale=1):

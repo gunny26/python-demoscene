@@ -18,7 +18,7 @@ extensions = [
     Extension("Polygon", ["src/Polygon.pyx"], extra_compile_args=extra_compile_args),
     Extension("Utils3d", ["src/Utils3d.pyx"], extra_compile_args=extra_compile_args),
     Extension("Mesh", ["src/Mesh.pyx"], extra_compile_args=extra_compile_args),
-    Extension("Transformer", ["src/Transformer.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Plasma", ["src/Plasma.pyx"], extra_compile_args=extra_compile_args),
 ]
 
 setup(

@@ -108,7 +108,7 @@ class PlasmaPy(object):
 
 def test():
     try:
-        fps = 50
+        #fps = 50
         surface = pygame.display.set_mode((400, 225))
         pygame.init()
         things = (
@@ -120,9 +120,11 @@ def test():
         # fill background
         surface.fill((0, 0, 0, 255))
         running = True
-        while running:
+        frames = 0
+        starttime = time.time()
+        while running and frames < 100:
             # limit to FPS
-            clock.tick(fps)
+            #clock.tick(fps)
             # Event Handling
             events = pygame.event.get()  
             for event in events:  
@@ -140,10 +142,15 @@ def test():
                     thing.update()
                 pygame.display.update()
                 # pygame.display.flip()
+            frames += 1
+        duration = time.time() - starttime
+        print "Done %s frames in %s seconds, %s frames/s" % (frames, duration, frames/duration)
     except KeyboardInterrupt:
         print 'shutting down'
 
 if __name__ == "__main__":
+    #test()
+    #sys.exit(1)
     import pstats
     import cProfile
     profile = "Plasma.profile"

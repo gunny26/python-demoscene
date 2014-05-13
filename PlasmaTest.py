@@ -8,6 +8,7 @@ import math
 import time
 import Plasma
 from Plasma import Plasma as Plasma
+from Plasma import PlasmaFractal as PlasmaFractal
 
 class PlasmaPy(object):
     """Plasma Effect on Surface"""
@@ -110,6 +111,7 @@ def test():
     try:
         #fps = 50
         surface = pygame.display.set_mode((400, 225))
+        print pygame.display.Info()
         pygame.init()
         things = (
             Plasma(surface, scale=2),

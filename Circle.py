@@ -4,6 +4,9 @@ import pygame
 import sys
 import math
 # own modules
+#import pygame.math.Vector2
+#import pygame.math.Vector3 as Vec3d
+#import pygame.math.Vector2 as Vec2d
 from Vec2d import Vec2d
 from Vec3d import Vec3d
 

@@ -3,9 +3,10 @@
 import sys
 import pygame
 import math
+from HilbertCurve import HilbertCurve as HilbertCurve
 from Vec2d import Vec2d as Vec2d
 
-class HilbertCurve(object):
+class HilbertCurvePy(object):
     """Basic Hilbert Curve Algorithm"""
 
     def __init__(self, surface, iteration=6, length=6):

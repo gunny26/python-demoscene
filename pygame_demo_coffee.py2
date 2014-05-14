@@ -1,0 +1,191 @@
+#!/usr/bin/python3
+
+# import the relevant libraries
+import sys
+import time
+import pygame
+from pygame import gfxdraw
+import random
+import os
+import math
+import noise
+# from pygame.locals import *
+from Vec2d import Vec2d as Vec2d
+from Vector2d import Vector2d as Vector2d
+
+# define screen size
+SCREEN = (800, 600)
+# control Frame Rate
+CLOCK = pygame.time.Clock()
+FPS = 300
+# define background musicfile
+BACKGROUND_MUSIC = "monkey_island_theme.mp3"
+
+class FinishedException(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+
+class GameObject(object):
+    """Abstract class definition"""
+    
+    def __init__(self, surface, game_engine):
+        self.surface = surface
+        self.game_engine = game_engine
+
+    def update(self):
+        """update every step"""
+        pass
+
+    def initialize(self):
+        """set initial state"""
+        pass
+
+    def move(self):
+        """move something"""
+        pass
+
+    def draw(self):
+        """draw on screen"""
+        pass
+
+
+class Bean(object):
+
+    def __init__(self, surface, beans, parameter_dict):
+        self.__dict__.update(parameter_dict)
+        self.surface = surface
+        self.beans = beans
+        self.vel = 3 # or option vel
+        self.accel = -0.003 # or option accel
+        self.width = self.surface.get_width()
+        self.height = self.surface.get_height()
+        self.color = pygame.Color(0, 0, 0, 0)
+
+    def draw(self):
+        if self.vel < 0 :
+            del self
+            # self.beans.remove(self)
+        # original 0.0007
+        self.x_off += 0.0007
+        self.y_off += 0.0007
+        self.vel += self.accel
+        self.x += noise.pnoise1(self.x_off, octaves=8) * self.vel - self.vel / 2
+        self.y += noise.pnoise1(self.y_off, octaves=8) * self.vel - self.vel / 2
+        # set color
+        h = abs(noise.pnoise1((self.x_off + self.y_off) / 2)) * 360
+        self.color.hsva = (h, 100, 100, 4)
+        pygame.gfxdraw.pixel(self.surface, int(self.x) % self.width, int(self.y) % self.height, self.color)
+
+
+class CoffeeDraw(GameObject):
+
+    def __init__(self, surface, game_engine):
+        GameObject.__init__(self, surface, game_engine)
+        self.beans = []
+        self.framecount = 1
+
+    def update(self):
+        self.framecount += 1
+        x_off = self.framecount * 0.0003
+        y_off = x_off + 20
+        x = noise.pnoise1(x_off, octaves=8) * self.surface.get_width()
+        y = noise.pnoise1(y_off, octaves=8) * self.surface.get_height()
+        # every 8th frame a new bean
+        if self.framecount % 8 == 0:
+            self.beans.append(Bean(self.surface, self.beans, { 
+                "x" : x, 
+                "y" : y, 
+                "x_off" : x_off, 
+                "y_off" : y_off}))
+        for bean in self.beans:
+            bean.draw()
+
+
+class GameEngine(object):
+    """Controls Life of many GameObjects"""
+
+    def __init__(self, surface, gamestat):
+        """just __init__"""
+        self.surface = surface
+        self.gamestat = gamestat
+        # create initial set of character
+        self.game_objects = []
+        self.generate()
+
+    def update(self):
+        """ handle all characters an generate more if to less on screen"""
+        # update characters
+        for game_object in self.game_objects:
+            game_object.update()
+        return("running")
+        
+    def generate(self):
+        """ generates a new character and put it on the list """
+        self.game_objects.append(CoffeeDraw(self.surface, self))
+
+    def delete(self, child, clicked):
+        """deletes child from list"""
+        for item in self.game_objects:
+            if item == child:
+                self.game_objects.remove(item)
+
+
+def ingame_loop(surface, game_engine):
+    """ main ingame loop """
+    while True:
+        events = pygame.event.get()  
+        for event in events:  
+            if event.type == pygame.QUIT:  
+                sys.exit(0)
+        keyinput = pygame.key.get_pressed()
+        if keyinput is not None:
+            # print keyinput
+            if keyinput[pygame.K_ESCAPE]:
+                return("lost")
+        # sleep between every frame
+        CLOCK.tick(FPS)
+        # time.sleep( sleeptime__in_seconds )
+        # blank screen
+        # surface.fill(0)
+        # update everything
+        pygame.display.set_caption("frame rate: %.2f frames per second" % CLOCK.get_fps())
+        state = game_engine.update()
+        # state of engine could be
+        # running
+        # finished - player reached end of game
+        # lost - player lost game
+        if state != "running" :
+            return(state)
+        # update the screen to show the latest screen image
+        pygame.display.update()
+
+def main():
+    """just __main__"""
+    # this is where one sets how long the script
+    # sleeps for, between frames.sleeptime__in_seconds = 0.05
+    # initialise the display window
+    screen = pygame.display.set_mode(SCREEN)
+    
+    pygame.init()
+    #pygame.mixer.init()
+    #pygame.mixer.music.load(BACKGROUND_MUSIC)
+    #pygame.mixer.music.play(-1) # endless background music
+
+    while True:
+        # main logic of game
+        game_engine = GameEngine(screen, None)
+        # start game loop
+        state = ingame_loop(screen, game_engine)
+        # state could be
+        # finished - player finished level
+        # lost - player lost
+        # if player click, restart will be true
+        if state == "lost":
+            sys.exit(0)
+        elif state == "finished":
+            sys.exit(0)
+
+if __name__ == "__main__" :
+    main()

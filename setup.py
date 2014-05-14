@@ -24,6 +24,8 @@ extensions = [
     Extension("PlasmaFractal2", ["src/PlasmaFractal2.py"], extra_compile_args=extra_compile_args),
     Extension("Mandelbrot", ["src/Mandelbrot.pyx"], extra_compile_args=extra_compile_args),
     Extension("CoffeeBean", ["src/CoffeeBean.pyx"], extra_compile_args=extra_compile_args),
+    Extension("SinusText", ["src/SinusText.pyx"], extra_compile_args=extra_compile_args),
+    Extension("HilbertCurve", ["src/HilbertCurve.pyx"], extra_compile_args=extra_compile_args),
 ]
 
 setup(

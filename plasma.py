@@ -9,12 +9,15 @@ from Plasma import Plasma as Plasma
 
 def test():
     try:
-        #fps = 50
+        fps = 50
         surface = pygame.display.set_mode((400, 225))
         print pygame.display.Info()
         pygame.init()
         things = (
-            Plasma(surface, scale=2),
+                {   "start": 0,
+                    "stop": 999,
+                    "class" : Plasma(surface, scale=2),
+                },
             )
         clock = pygame.time.Clock()       
         # mark pause state 
@@ -26,7 +29,7 @@ def test():
         starttime = time.time()
         while running and frames < 100:
             # limit to FPS
-            #clock.tick(fps)
+            clock.tick(fps)
             # Event Handling
             events = pygame.event.get()  
             for event in events:  
@@ -37,11 +40,13 @@ def test():
                 # print keyinput
                 if keyinput[pygame.K_ESCAPE]:
                     running = False
+            runtime = int(time.time() - starttime)
             # Update Graphics
             if pause is not True:
                 surface.fill((0, 0, 0, 255))
                 for thing in things:
-                    thing.update()
+                    if thing["start"] < runtime < thing["stop"]:
+                        thing["class"].update()
                 pygame.display.update()
                 # pygame.display.flip()
             frames += 1

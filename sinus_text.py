@@ -3,8 +3,9 @@
 import pygame
 import sys
 import math
+from SinusText import SinusText as SinusText
 
-class SinusText(object):
+class SinusTextPy(object):
     """Sinus wave scroll text"""
 
     def __init__(self, surface, text, hpos, amplitude, frequency, color, size=30):

@@ -6,7 +6,7 @@ import pygame
 import random
 import math
 
-class PlasmaFractal(object):
+class PlasmaFractal2(object):
     """Plasma Generator"""
 
     def __init__(self, surface):
@@ -74,7 +74,7 @@ def test():
         pygame.init()
         surface = pygame.display.set_mode((800, 600))
         print pygame.display.Info()
-        thing = PlasmaFractal(surface)
+        thing = PlasmaFractal2(surface)
         clock = pygame.time.Clock()       
         pause = False
         while True:

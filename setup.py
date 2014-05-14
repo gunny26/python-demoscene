@@ -19,10 +19,15 @@ extensions = [
     Extension("Utils3d", ["src/Utils3d.pyx"], extra_compile_args=extra_compile_args),
     Extension("Mesh", ["src/Mesh.pyx"], extra_compile_args=extra_compile_args),
     Extension("Plasma", ["src/Plasma.pyx"], extra_compile_args=extra_compile_args),
+    Extension("PlasmaPy", ["src/PlasmaPy.py"], extra_compile_args=extra_compile_args),
+    Extension("PlasmaFractal", ["src/PlasmaFractal.pyx"], extra_compile_args=extra_compile_args),
+    Extension("PlasmaFractal2", ["src/PlasmaFractal2.py"], extra_compile_args=extra_compile_args),
+    Extension("Mandelbrot", ["src/Mandelbrot.pyx"], extra_compile_args=extra_compile_args),
+    Extension("CoffeeBean", ["src/CoffeeBean.pyx"], extra_compile_args=extra_compile_args),
 ]
 
 setup(
-    name = "Math3dfx",
+    name = "python-demoscene",
     version = "1.0",
     ext_modules = cythonize(extensions), # accepts a glob pattern
 )

@@ -151,8 +151,8 @@ def test():
         print 'shutting down'
 
 if __name__ == "__main__":
-    #test()
-    #sys.exit(1)
+    test()
+    sys.exit(1)
     import pstats
     import cProfile
     profile = "Plasma.profile"

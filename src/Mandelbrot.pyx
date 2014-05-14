@@ -3,9 +3,16 @@
 
 import sys
 import pygame
+import numpy as np
+cimport numpy as np
 
-class Mandelbrot(object):
+cdef class Mandelbrot(object):
     """Clasical Mandelbrot Function, realy slow on python, so have some patience"""
+
+    cdef object surface
+    cdef int width
+    cdef int height
+    cdef np.ndarray array2d
 
     def __init__(self, surface):
         """
@@ -19,13 +26,20 @@ class Mandelbrot(object):
         self.initialize()
         print "done" 
 
-    def initialize(self, left=-2.1, right=0.7, bottom=-1.2, top=1.2, maxiter=30):
+    cdef initialize(self, float left=-2.1, float right=0.7, float bottom=-1.2, float top=1.2, int maxiter=30):
         """
         initialize pixelarray with color value,
         classical approach, really, really slow
         """
-        x = xx = y = cx = cy = betrag = x2 = y2 = None
-        iteration = hx = hy = None
+        cdef float x, xx, y, cx, cy, betrag, x2, y2
+        cdef int interation, hx, hy
+        cdef int itermax
+        cdef float magnify
+        cdef float stepy
+        cdef float stepx
+        cdef int color
+        x = xx = y = cx = cy = betrag = x2 = y2 = 0.0
+        iteration = hx = hy = 0
         itermax = 255		# how many iterations to do
         magnify=1.0		# no magnification
         stepy = (top - bottom) / self.height
@@ -37,7 +51,7 @@ class Mandelbrot(object):
                 x = cx
                 y = cy
                 iteration = 0
-                betrag = 0 
+                betrag = 0.0 
                 while (iteration < itermax) and (betrag < maxiter):
                     x2 = x * x
                     y2 = y * y
@@ -46,11 +60,13 @@ class Mandelbrot(object):
                     y = 2.0 * x * y + cy
                     x = xx
                     iteration += 1
-                self.array2d[hx][hy] = pygame.Color(iteration, iteration, iteration)
+                color = (iteration << 16) + (iteration << 8) + iteration
+                # color = pygame.Color(iteration, iteration, iteration)
+                self.array2d[hx][hy] = color
                 cx = cx + stepx
             cy = cy + stepy
 
-    def update(self):
+    cpdef update(self):
         """blit pixelarray to surface"""
         pygame.surfarray.blit_array(self.surface, self.array2d)
 

@@ -43,12 +43,28 @@ cdef class Polygon(object):
             new_vertices[row] = matrix.dot(self.vertices[row])
         return(Polygon(new_vertices))
 
-    cpdef list projected(self, int shift_x, int shift_y):
-        """return point list in 2d for polygon method of pygame.draw"""
+    cpdef list projected_old(self, int shift_x, int shift_y):
+        """
+        return point list in 2d for polygon method of pygame.draw
+        simple algorithm which divides x and y through z value
+        """
         cdef list vertices_2d = []
         for vector in self.vertices:
             abs_z = abs(vector[2])
             vertices_2d.append((vector[0] / abs_z + shift_x, vector[1] / abs_z + shift_y))
+        return(vertices_2d)
+    
+    cpdef list projected(self, int shift_x, int shift_y, double fov=0.8, int viewer_distance=1):
+        """
+        method with field of view and viewer distance
+        """
+        cdef list vertices_2d = []
+        cdef double factor, x, y
+        for vector in self.vertices:
+            factor = fov / (viewer_distance + vector[2])
+            x = vector[0] * factor + shift_x
+            y = -vector[1] * factor + shift_y
+            vertices_2d.append((x, y))
         return(vertices_2d)
 
     cpdef list projected_faster(self, int shift_x, int shift_y):
@@ -59,7 +75,6 @@ cdef class Polygon(object):
             abs_z = abs(self.vertices[counter][2])
             vertices_2d.append((self.vertices[counter][0] / abs_z + shift_x, self.vertices[counter][1] / abs_z + shift_y))
         return(vertices_2d)
-
 
     cpdef np.ndarray get_normal(self):
         """

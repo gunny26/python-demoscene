@@ -1,100 +1,123 @@
 #!/usr/bin/python
-# cython: profile=True
 # -*- coding: utf-8 -*-
+
 import math
-import numpy as np
-cimport numpy as np
-DTYPE = np.float32
-ctypedef np.float32_t DTYPE_t
 
-cdef class Vector(object):
+cdef class Vector3(object):
+    """Vector in R³ not homgeneous"""
 
-    cdef public np.ndarray data
+    cdef public double x
+    cdef public double y
+    cdef public double z
 
-    def __init__(self, np.ndarray data):
-        self.data = data
+    def __init__(self, double x, double y, double z):
+        self.x = x
+        self.y = y
+        self.z = z
 
     @classmethod
-    def from_tuple(cls, *args):
-        return(cls(np.array(args, dtype=DTYPE)))
-
-    def __getitem__(self, int key):
-        return(self.data[key])
-
-    def __setitem__(self, int key, double value):
-        self.data[key] = value
+    def from_tuple(cls, data):
+        return(cls(data[0], data[1], data[2]))
 
     def __len__(self):
         """list interface"""
         return(3)
 
+    def __getitem__(self, int key):
+        """list interface"""
+        if key == 0:
+            return(self.x)
+        elif key == 1:
+            return(self.y)
+        elif key == 2:
+            return(self.z)
+        else:
+            raise(IndexError("Invalid index %d to Vector" % key))
+
+    def __setitem__(self, int key, double value):
+        """list interface"""
+        if key == 0:
+            self.x = value
+        elif key == 1:
+            self.y = value
+        elif key == 2:
+            self.z = value
+        else:
+            raise(IndexError("Invalid index %d to Vector" % key))
+
     def __repr__(self):
         """object representation"""
-        return("%s(%s)" % (self.__class__.__name__, self.data))
+        return("Vector(%(x)f, %(y)f, %(z)f)" % self.__dict__)
 
     def __str__(self):
         """string output"""
-        return("%s" % (self.data))
+        return("[%(x)f, %(y)f, %(z)f]" % self.__dict__)
 
-    def __add__(self, other):
+    def __add__(self, object other):
         """vector addition with another Vector class"""
-        result = self.data + other.data
-        return(Vector(result))
+        return(Vector3(self.x + other.x, self.y + other.y, self.z + other.z))
 
-    def __iadd__(self, other):
-        """vector addition with another Vector class inplace"""
-        self.data = self.data + other.data
-        return(self)
-
-    def __sub__(self, other):
-        """vector addition with another Vector class"""
-        result = self.data - other.data
-        return(Vector(result))
-
-    def __isub__(self, other):
+    def __iadd__(self, object other):
         """vector addition with another Vector class implace"""
-        self.data = self.data - other.data
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
         return(self)
 
-    def __richcmp__(self, other, int method):
+    def __sub__(self, object other):
+        """vector addition with another Vector class"""
+        return(Vector3(self.x - other.x, self.y - other.y, self.z - other.z))
+
+    def __isub__(self, object other):
+        """vector addition with another Vector class implace"""
+        self.x -= other.x
+        self.y -= other.y
+        self.z -= other.z
+        return(self)
+
+    def __richcmp__(self, object other, int method):
         if method == 0: # < __lt__
             pass
         elif method == 2: # == __eq__
-            return(self.data == other.data)
+            return(self.x == other.x and self.y == other.y and self.z == other.z)
         elif method == 4: # > __gt__
             pass
         elif method == 1: # <= lower_equal
             pass
         elif method == 3: # != __ne__
-            return(self.data != other.data)
+            return(self.x != other.x or self.y != other.y or self.z != other.z)
         elif method == 5: # >= greater equal
             pass
             
     def __mul__(self, double scalar):
         """multiplication with scalar"""
-        return(Vector(self.data * scalar))
+        return(Vector3(self.x * scalar, self.y * scalar, self.z * scalar))
 
     def __imul__(self, double scalar):
         """multiplication with scalar inplace"""
-        self.data *= scalar
+        self.x *= scalar
+        self.y *= scalar
+        self.z *= scalar
         return(self)
 
     def __div__(self, double scalar):
         """division with scalar"""
-        return(Vector(self.data / scalar))
+        return(Vector3(self.x / scalar, self.y / scalar, self.z / scalar))
 
     def __idiv__(self, double scalar):
         """vector addition with another Vector class"""
-        self.data /= scalar
+        self.x /= scalar
+        self.y /= scalar
+        self.z /= scalar
         return(self)
 
-    cpdef double length(self):
+    cpdef length(self):
         """length"""
-        return(math.sqrt((self.data ** 2).sum()))
+        return(math.sqrt(self.x **2 + self.y ** 2 + self.z ** 2))
 
-    cpdef double length_sqrd(self):
+    cpdef length_sqrd(self):
         """length squared"""
-        return((self.data ** 2).sum())
+        return(self.x **2 + self.y ** 2 + self.z ** 2)
 
     cpdef double dot(self, other):
         """
@@ -115,9 +138,11 @@ cdef class Vector(object):
         so theta could be calculates as 
         theta = acos(dot product)
         """
-        return(self.data.dot(other.data))
+        cdef double dotproduct = self.x * other.x + self.y * other.y + self.z * other.z
+        return(dotproduct)
 
-    cpdef Vector cross(self, other):
+
+    cpdef cross(self, other):
         """
         cross product of self an other vector
         the result is a new perpendicular vector to self and other
@@ -137,27 +162,24 @@ cdef class Vector(object):
         
         |cross product| = sin(theta)
         """
-        return(Vector(np.cross(self.data, other.data)))
+        return(Vector3(
+            self.y * other.z - self.z * other.y, 
+            self.z * other.x - self.x * other.z, 
+            self.x * other.y - self.y * other.x))
 
-    cpdef Vector normalized(self):
+    cpdef normalized(self):
         """
         return self with length=1, unit vector
         """
-        return(Vector(np.divide(self.data, self.length())))
+        return(self / self.length())
     unit = normalized
 
-    cpdef tuple project2d(self, shift_vec, fov=0.8, viewer_distance=100):
+    cpdef tuple project2d(self, shift_vec):
         """
         project self to 2d
         simply divide x and y with z value
-        fov in angle between 100 - 60 degrees
         """
-        cdef double factor = fov / (viewer_distance + self.data[2])
-        cdef double x = self.data[0] * factor + shift_vec[0]
-        cdef double y = -self.data[1] * factor + shift_vec[1]
-        return((x, y))
-        #shifted = self.data / self.data[2]
-        #return((shifted[0] + shift_vec[0], shifted[1] + shift_vec[1]))
+        return((self.x / self.z + shift_vec[0], self.y / self.z + shift_vec[1]))
 
     cpdef double angle_to(self, other):
         """

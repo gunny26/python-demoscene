@@ -26,6 +26,7 @@ extensions = [
     Extension("CoffeeBean", ["src/CoffeeBean.pyx"], extra_compile_args=extra_compile_args),
     Extension("SinusText", ["src/SinusText.pyx"], extra_compile_args=extra_compile_args),
     Extension("HilbertCurve", ["src/HilbertCurve.pyx"], extra_compile_args=extra_compile_args),
+    Extension("Fire", ["src/Fire.pyx"], extra_compile_args=extra_compile_args),
 ]
 
 setup(

@@ -4,9 +4,10 @@ import pygame
 import sys
 import random
 import numpy
+from Fire import Fire as Fire
 
 
-class Fire(object):
+class FirePy(object):
     """
     Simulated Fire, 2d effect
     idea and basic algorithm from
@@ -90,13 +91,12 @@ def test():
         surface = pygame.display.set_mode((600, 600))
         pygame.init()
         spheres = (
-            Fire(surface, pygame.Rect(0, 0, 600, 600), 4), 
+            Fire(surface, 4), 
             )
         clock = pygame.time.Clock()       
         pause = False
-        surface.fill((0, 0, 0))
         while True:
-            clock.tick(fps)
+            clock.tick()
             events = pygame.event.get()  
             for event in events:  
                 if event.type == pygame.QUIT:  
@@ -108,7 +108,8 @@ def test():
             if pause is not True:
                 for thing in spheres:
                     thing.update()
-                pygame.display.flip()
+                pygame.display.update()
+            pygame.display.set_caption("frame rate: %.2f frames per second" % clock.get_fps())
     except KeyboardInterrupt:
         print 'shutting down'
 

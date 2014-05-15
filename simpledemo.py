@@ -15,7 +15,7 @@ from Mesh import Mesh as Mesh
 def test():
     try:
         fps = 50
-        surface = pygame.display.set_mode((800, 600), pygame.FULLSCREEN)
+        surface = pygame.display.set_mode((800, 600))
         print pygame.display.Info()
         pygame.init()
         things = (

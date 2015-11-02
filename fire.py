@@ -88,10 +88,10 @@ class FirePy(object):
 def test():
     try:
         fps = 500
-        surface = pygame.display.set_mode((600, 600))
+        surface = pygame.display.set_mode((320, 200))
         pygame.init()
         spheres = (
-            Fire(surface, 4), 
+            Fire(surface, 2), 
             )
         clock = pygame.time.Clock()       
         pause = False
@@ -115,6 +115,8 @@ def test():
 
 
 if __name__ == '__main__':
+    test()
+    sys.exit(0)
     import sys
     import os
     import cProfile
